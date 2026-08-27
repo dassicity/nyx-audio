@@ -1,0 +1,552 @@
+<title>The Lossless Pi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=JetBrains+Mono:wght@400;600&family=Newsreader:opsz,wght@6..72,300..600&display=swap">
+
+<style>
+:root{
+  --ground:#E9EAE7;
+  --surface:#F7F8F5;
+  --surface-2:#DFE1DC;
+  --ink:#191B19;
+  --ink-2:#4E534D;
+  --ink-3:#767C74;
+  --rule:#CBCEC7;
+  --rule-strong:#A9AEA4;
+  --accent:#9A6208;
+  --accent-soft:#E6D7B8;
+  --go:#2C6E4C;
+  --warn:#8C6A16;
+  --stop:#9C3E27;
+  --shadow:0 1px 0 rgba(25,27,25,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121412;
+    --surface:#1B1E1B;
+    --surface-2:#252925;
+    --ink:#E4E7E2;
+    --ink-2:#A9AFA6;
+    --ink-3:#7C837A;
+    --rule:#2C302B;
+    --rule-strong:#454B44;
+    --accent:#E0A845;
+    --accent-soft:#3A3020;
+    --go:#63BE8C;
+    --warn:#D6AC53;
+    --stop:#DE7E60;
+    --shadow:0 1px 0 rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121412;
+  --surface:#1B1E1B;
+  --surface-2:#252925;
+  --ink:#E4E7E2;
+  --ink-2:#A9AFA6;
+  --ink-3:#7C837A;
+  --rule:#2C302B;
+  --rule-strong:#454B44;
+  --accent:#E0A845;
+  --accent-soft:#3A3020;
+  --go:#63BE8C;
+  --warn:#D6AC53;
+  --stop:#DE7E60;
+  --shadow:0 1px 0 rgba(0,0,0,.4);
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"Newsreader",Georgia,"Times New Roman",serif;
+  font-size:18px;
+  line-height:1.62;
+  font-weight:380;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:860px;margin:0 auto;padding:0 28px 120px;}
+.measure{max-width:66ch;}
+
+/* ---------- type roles ---------- */
+.eyebrow{
+  font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);
+}
+h1,h2,h3,.faceplate-name{
+  font-family:"Archivo","Helvetica Neue",Arial,sans-serif;
+  text-wrap:balance;
+  margin:0;
+}
+h1{
+  font-size:clamp(46px,9vw,86px);
+  font-variation-settings:"wdth" 108,"wght" 800;
+  line-height:.94;
+  letter-spacing:-.025em;
+  margin:14px 0 0;
+}
+h2{
+  font-size:clamp(26px,4.2vw,34px);
+  font-variation-settings:"wdth" 104,"wght" 700;
+  line-height:1.08;
+  letter-spacing:-.015em;
+}
+h3{
+  font-size:19px;
+  font-variation-settings:"wdth" 100,"wght" 700;
+  line-height:1.25;
+  letter-spacing:-.005em;
+}
+p{margin:0 0 1.05em;}
+p:last-child{margin-bottom:0;}
+a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:3px;text-decoration-thickness:1.5px;}
+a:hover{color:var(--accent);}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px;}
+strong{font-weight:600;color:var(--ink);}
+em{font-style:italic;}
+code,.mono{
+  font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.83em;
+}
+code{background:var(--surface-2);padding:.12em .38em;border-radius:3px;}
+
+/* ---------- masthead ---------- */
+.masthead{padding:64px 0 0;}
+.deck{
+  font-size:21px;line-height:1.5;color:var(--ink-2);
+  max-width:52ch;margin-top:22px;
+}
+.byline{
+  margin-top:26px;padding-top:14px;border-top:1px solid var(--rule);
+  display:flex;flex-wrap:wrap;gap:10px 22px;align-items:baseline;
+}
+
+/* ---------- chips ---------- */
+.chiprow{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 0;}
+.chip{
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  padding:5px 10px 5px 8px;border:1px solid var(--rule);border-radius:2px;
+  background:var(--surface);color:var(--ink-2);white-space:nowrap;
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ink-3);flex:none;}
+.chip.go .dot{background:var(--go);}
+.chip.warn .dot{background:var(--warn);}
+.chip.stop .dot{background:var(--stop);}
+
+/* ---------- sections ---------- */
+section{margin-top:76px;}
+.sechead{
+  border-top:2px solid var(--ink);
+  padding-top:12px;margin-bottom:26px;
+}
+.sechead .eyebrow{display:block;margin-bottom:10px;}
+
+/* ---------- rack faceplate (stages) ---------- */
+.faceplate{
+  background:var(--surface);
+  border:1px solid var(--rule-strong);
+  border-radius:3px;
+  box-shadow:var(--shadow);
+  display:flex;align-items:stretch;gap:0;
+  margin-bottom:28px;
+  overflow:hidden;
+}
+.faceplate-num{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:13px;font-weight:600;letter-spacing:.06em;
+  color:var(--ground);background:var(--ink);
+  display:flex;align-items:center;padding:0 16px;flex:none;
+}
+.faceplate-body{padding:16px 20px;display:flex;flex-direction:column;gap:7px;min-width:0;}
+.faceplate-name{
+  font-size:clamp(23px,4vw,30px);
+  font-variation-settings:"wdth" 112,"wght" 800;
+  line-height:1;letter-spacing:-.02em;text-transform:uppercase;
+}
+.faceplate-sub{font-size:16px;color:var(--ink-2);line-height:1.4;}
+
+/* ---------- generic blocks ---------- */
+.block{margin-top:34px;}
+.block > h3{margin-bottom:10px;}
+.block > h3 + p, .block > h3 + ul{margin-top:0;}
+
+ul,ol{margin:0 0 1.05em;padding-left:1.15em;}
+li{margin-bottom:.5em;}
+li:last-child{margin-bottom:0;}
+ul.tight li{margin-bottom:.34em;}
+
+.lede{
+  font-size:20px;line-height:1.5;color:var(--ink);
+  border-left:3px solid var(--accent);padding-left:20px;margin-bottom:28px;
+}
+
+.note{
+  background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);
+  border-radius:2px;padding:16px 20px;margin:26px 0;font-size:16.5px;line-height:1.55;
+}
+.note .eyebrow{display:block;margin-bottom:7px;}
+
+/* ---------- two-up ---------- */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:26px 0;}
+.pane{
+  background:var(--surface);border:1px solid var(--rule);border-radius:3px;
+  padding:18px 20px;display:flex;flex-direction:column;gap:9px;
+}
+.pane.dim{background:transparent;border-style:dashed;color:var(--ink-2);}
+.pane p{font-size:16px;line-height:1.5;}
+
+/* ---------- spec list ---------- */
+.specs{display:flex;flex-direction:column;border-top:1px solid var(--rule);margin:24px 0;}
+.spec{
+  display:grid;grid-template-columns:150px 1fr;gap:6px 24px;
+  padding:16px 0;border-bottom:1px solid var(--rule);align-items:start;
+}
+.spec-k{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);padding-top:5px;
+}
+.spec-v{font-size:17px;line-height:1.5;}
+.spec-v p{margin-bottom:.6em;}
+
+/* ---------- shelf cards ---------- */
+.shelf{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:28px;}
+.card{
+  background:var(--surface);border:1px solid var(--rule);border-radius:3px;
+  padding:18px 20px 20px;display:flex;flex-direction:column;gap:10px;
+}
+.card p{font-size:15.5px;line-height:1.5;color:var(--ink-2);}
+.card h3{font-size:17.5px;}
+.card .chiprow{margin:0;}
+.card .chip{font-size:9.5px;padding:3px 8px 3px 6px;}
+
+/* ---------- ordered moves ---------- */
+.moves{list-style:none;padding:0;margin:26px 0 0;counter-reset:m;display:flex;flex-direction:column;gap:2px;}
+.moves li{
+  counter-increment:m;display:grid;grid-template-columns:34px 1fr;gap:16px;
+  padding:14px 0;border-bottom:1px solid var(--rule);margin:0;font-size:17px;line-height:1.5;
+}
+.moves li::before{
+  content:counter(m,decimal-leading-zero);
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:12px;font-weight:600;color:var(--accent);padding-top:5px;letter-spacing:.05em;
+}
+
+/* ---------- footer ---------- */
+footer{margin-top:80px;padding-top:20px;border-top:2px solid var(--ink);}
+footer p, footer li{font-size:14.5px;line-height:1.55;color:var(--ink-2);}
+footer ul{columns:2;column-gap:36px;padding-left:1.1em;}
+@media (max-width:640px){
+  body{font-size:17px;}
+  .wrap{padding:0 20px 80px;}
+  .duo,.shelf{grid-template-columns:1fr;}
+  .spec{grid-template-columns:1fr;gap:4px;}
+  .spec-k{padding-top:0;}
+  footer ul{columns:1;}
+  .faceplate-num{padding:0 12px;}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <span class="eyebrow">Feasibility study · August 2026</span>
+  <h1>The Lossless Pi</h1>
+  <p class="deck">A private, lossless music library on a Raspberry&nbsp;Pi 5 — served over the home network, played on the machine in your hands.</p>
+  <div class="chiprow">
+    <span class="chip go"><span class="dot"></span>V1 · Straightforward</span>
+    <span class="chip warn"><span class="dot"></span>V2 · Sourcing is the risk</span>
+    <span class="chip warn"><span class="dot"></span>V3 · iOS is the gate</span>
+  </div>
+  <div class="byline">
+    <span class="eyebrow">Pi 5 · 4GB · headless</span>
+    <span class="eyebrow">Audio decodes client-side</span>
+    <span class="eyebrow">FLAC · 16/44 → 24/192</span>
+  </div>
+</header>
+
+<section>
+  <div class="sechead"><span class="eyebrow">01 — Verdict</span><h2>The idea works. The hard parts are not where you think.</h2></div>
+
+  <p class="lede">A Pi 5 serving FLAC over a LAN is not a demanding job. One FLAC stream is roughly 1 Mbps — about 0.1% of your gigabit Ethernet, and well inside what Wi-Fi handles. Compute is not your constraint. Storage, sourcing, and browser playback are.</p>
+
+  <div class="block">
+    <h3>Version 1 is a weekend, not a project</h3>
+    <p>Copy files to the Pi, run a library server, point a browser at it. This part is genuinely solved. Your entire effort should go into the interface and the playback engine, because that is the only part that doesn't already exist in a form you'd be happy with.</p>
+  </div>
+
+  <div class="block">
+    <h3>Version 2's difficulty is legal and logistical, not technical</h3>
+    <p>The code that searches, downloads, tags and imports music is a few hundred lines glued to existing tools. What you cannot engineer around is that lossless files are not freely and instantly available on demand. Soulseek transfers are queue-dependent and slow; purchased downloads have no API; free legal catalogues are deep but narrow. The fantasy of "type a name, hear it in lossless three seconds later" does not exist at any price. What you <em>can</em> build is better than nothing and, designed right, better than waiting.</p>
+  </div>
+
+  <div class="block">
+    <h3>Version 3 hinges on one platform limitation</h3>
+    <p>An installed web app on Android or desktop is a real music player. On iOS, background audio from a browser-based app is unreliable — playback stops when the screen locks or you switch apps. If you listen on an iPhone, that single fact is what forces a native shell (Flutter, React Native) rather than a progressive web app. Decide which phone matters before you write the client, because it changes the answer completely.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><span class="eyebrow">02 — Consequences</span><h2>What "the Pi never touches audio" already settled for you</h2></div>
+
+  <p>Choosing to decode on your laptop and phone — the Pi purely as a file and metadata server — removes a large amount of complexity, and adds one honest limitation. Worth being explicit about both.</p>
+
+  <div class="duo">
+    <div class="pane">
+      <span class="eyebrow">What you gained</span>
+      <p><strong>No DAC decision.</strong> The Pi 5 has no analog audio output at all — the 3.5mm jack was dropped from the board. Had the Pi been the player, you'd be choosing between a USB DAC and an I2S HAT before writing a line of code. You skip that entirely.</p>
+      <p><strong>The GPIO header stays free</strong>, so an NVMe HAT can have it without fighting a sound card for space.</p>
+      <p><strong>The Pi runs headless</strong> — no ALSA configuration, no exclusive-mode device locking, no audio group permissions, no clicks and pops to debug at midnight.</p>
+    </div>
+    <div class="pane dim">
+      <span class="eyebrow">What you gave up</span>
+      <p><strong>Bit-perfect playback.</strong> A browser hands audio to the operating system's mixer, which resamples everything to one rate — usually 48kHz. Your 44.1kHz FLAC gets converted on the way out. This is audibly fine and it is what every streaming service already does to you.</p>
+      <p>But <em>say so in the interface.</em> Showing <code>FLAC 16/44.1 → output 48kHz</code> instead of a vague "HD" badge is the cheapest way to make software feel like it was built by someone who cares. If you ever want true bit-perfect, that is a native desktop client, not a web page — a later chapter, not a v1 compromise.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><span class="eyebrow">03 — Hardware</span><h2>Three things the hardware will do to you</h2></div>
+
+  <div class="specs">
+    <div class="spec">
+      <div class="spec-k">Storage</div>
+      <div class="spec-v">
+        <p>A 64GB microSD is roughly <strong>150 albums</strong>, and that is before the operating system takes its ten. A CD-quality FLAC album runs 250–400MB; a 24/96 release runs 1–2GB. You will hit the ceiling faster than you expect, and you will hit it in the middle of a transfer.</p>
+        <p>Worse, SD cards wear out under a server's write pattern — database updates, logs, library rescans. This is the single most common way a Pi server dies. Move the library, and ideally the whole system, to an SSD: either the official M.2 HAT+ (note it only fits short 2230/2242 drives) or a USB 3.0 SSD. With no sound card competing for the header, the NVMe route is now clean.</p>
+      </div>
+    </div>
+    <div class="spec">
+      <div class="spec-k">Wiring &amp; power</div>
+      <div class="spec-v">
+        <p>Put the Pi on <strong>Ethernet</strong>. Bandwidth was never the issue; reliability is. A server that drops off Wi-Fi mid-album while you are on the sofa is the fastest way to abandon a project.</p>
+        <p>Use the 27W (5V/5A) USB-C supply if you hang an SSD off the USB ports, and give the Pi 5 <strong>active cooling</strong> — it throttles without it, and a throttled server during a library scan is a slow, confusing kind of broken.</p>
+      </div>
+    </div>
+    <div class="spec">
+      <div class="spec-k">The spare Pi</div>
+      <div class="spec-v">
+        <p>Don't leave it in a drawer. In order of usefulness to <em>this</em> project: a <strong>staging box</strong>, so you never deploy an untested build to the machine you actually listen on; a <strong>backup target</strong>, running a nightly snapshot of the library; and in v2, the <strong>ingest worker</strong> — downloading, fingerprinting, tagging and transcoding, kept off the machine that serves you music so a heavy import never stutters playback.</p>
+        <p>A fourth option, if you ever put speakers in another room: a synchronised playback endpoint. Set that aside for now — it contradicts the client-side model you just chose, and it is a project of its own.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><span class="eyebrow">04 — Architecture</span><h2>Do not write the backend</h2></div>
+
+  <p>The strongest thing you can do for this project is refuse to build the boring 80%. A library server — scanning folders, parsing tags, extracting cover art, handling users, transcoding, serving range requests — is thoroughly solved and profoundly unrewarding to rewrite.</p>
+
+  <p>Run <strong>Navidrome</strong>: a single Go binary, small enough that a Pi 5 with 4GB is comically overqualified, speaking the Subsonic / OpenSubsonic REST API. Then build <em>only</em> the client, which is the part you actually care about and the part worth designing.</p>
+
+  <div class="note">
+    <span class="eyebrow">The underrated benefit</span>
+    While you are building your own interface, every existing Subsonic client works against your server for free — on your phone, in the car, on a desktop. You are never blocked on your own unfinished UI to listen to your own music. That alone will decide whether this project survives month two.
+  </div>
+
+  <div class="block">
+    <h3>What you're giving up by not rolling your own</h3>
+    <p>The Subsonic API is old and its data model is opinionated — it thinks in artists, albums and tracks, and it will resist anything genuinely novel you want to model, like moods, listening contexts, or your own embeddings. The right answer is a thin service of your own <em>alongside</em> Navidrome that owns the interesting data and defers to Navidrome for the boring parts. Not a fork. A sidecar.</p>
+  </div>
+
+  <div class="block">
+    <h3>The state model that decides how far this can go</h3>
+    <p>Make the <strong>queue live on the server</strong>, not in the browser tab. Clients render server state and send intents; they don't own playback. This costs almost nothing in v1 and it is what makes "pick up on my phone where the laptop left off" a small feature later instead of a rewrite. Audio still decodes locally — only the <em>queue and position</em> are shared.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><span class="eyebrow">Roadmap</span><h2>Three stages</h2></div>
+
+  <div class="faceplate">
+    <div class="faceplate-num">V1</div>
+    <div class="faceplate-body">
+      <div class="faceplate-name">It plays</div>
+      <div class="faceplate-sub">Local library, browsed and played in a browser on your own machine.</div>
+    </div>
+  </div>
+
+  <div class="block">
+    <h3>The engineering that will actually cost you time</h3>
+    <p><strong>Gapless playback.</strong> This is the real technical challenge of v1, and it is easy to underestimate. An HTML <code>&lt;audio&gt;</code> element will not do it — swapping sources leaves an audible seam, which ruins live albums, DJ mixes, and most classical and progressive music. The workable approach is the Web Audio API: decode the next track into an audio buffer ahead of time and schedule it on the audio clock at an exact offset from the current one. A five-minute 16/44 track is about 50MB decoded, which is fine to hold in memory. Media Source Extensions with FLAC is the alternative, and it is well-supported in Chrome and shaky everywhere else.</p>
+    <p><strong>Loudness normalisation.</strong> Scan the library for ReplayGain / EBU R128 values and apply them, with a track-versus-album toggle. Without it, a 1970s pressing and a modern remaster differ by ten decibels and every shuffle is a jump scare. With it, the whole thing feels professionally made. This is a background job, not UI work, and it is the highest ratio of perceived quality to effort in the entire project.</p>
+    <p><strong>Media Session API.</strong> Two hours of work to make your laptop's media keys, lock screen, and Bluetooth headphone buttons control your player. It is the difference between "a web page that plays music" and "an app".</p>
+  </div>
+
+  <div class="block">
+    <h3>The design decisions that matter more than the code</h3>
+    <ul>
+      <li><strong>Make the album the primary object.</strong> Nearly every self-hosted player defaults to an infinite track list, because tracks are what the database has. Someone who collects FLAC listens to albums. Build the album view first and treat the track list as secondary.</li>
+      <li><strong>Show the signal path.</strong> Source format, bit depth, sample rate, whether it is being transcoded, what the output is actually running at. Nobody does this well and it costs almost nothing.</li>
+      <li><strong>Keyboard first.</strong> Space, arrows, <code>/</code> to search. You are the only user; optimise for you.</li>
+      <li><strong>Resume everything.</strong> Reload the tab, come back tomorrow, and the queue and position are exactly where you left them.</li>
+    </ul>
+  </div>
+
+  <div class="block">
+    <h3>Do the ingest work before you copy a single file</h3>
+    <p>Run your collection through <strong>beets</strong> first: it matches releases against MusicBrainz, fixes tags, fetches cover art, and enforces one folder convention. Garbage metadata produces a garbage interface, and no amount of design rescues an album view where the same artist appears four times under four spellings. Scan ReplayGain values in the same pass. Decide your layout once — <code>Artist/Album (Year)/NN - Title.flac</code> — and never think about it again.</p>
+    <p>Reach it at <code>http://music.local</code> via mDNS. Back it up from night one — the library is the irreplaceable asset here, not the code.</p>
+  </div>
+
+  <div class="faceplate" style="margin-top:56px;">
+    <div class="faceplate-num">V2</div>
+    <div class="faceplate-body">
+      <div class="faceplate-name">It finds things</div>
+      <div class="faceplate-sub">Search reaches past your shelves and brings music back.</div>
+    </div>
+  </div>
+
+  <div class="block">
+    <h3>Where lossless music actually comes from</h3>
+    <p>Four tiers, and they behave completely differently:</p>
+    <ul>
+      <li><strong>Purchased downloads.</strong> Bandcamp is the best of these — FLAC up to 24/192, re-downloadable forever, and the largest share to the artist. Qobuz's download store covers mainstream and hi-res catalogue; Presto for classical, Beatport and Bleep for electronic. None of them offer a purchase API, so automation stops at a watched folder: you buy, the folder ingests.</li>
+      <li><strong>Free and legal.</strong> The Internet Archive's Live Music Archive holds an enormous quantity of lossless, legitimately traded concert recordings, and it has a real API. This is the one source you can automate end to end with no asterisk. Free Music Archive, Jamendo and MusOpen cover the rest.</li>
+      <li><strong>Your own discs.</strong> A USB optical drive on the spare Pi plus secure ripping with AccurateRip verification gives you the highest-quality, lowest-risk files in existence. Unglamorous, which is exactly why a genuinely good "CD ingest station" would be a distinctive feature.</li>
+      <li><strong>Soulseek.</strong> You already use it via Nicotine+. The piece you want is <strong>slskd</strong> — a headless Soulseek daemon with a REST API, which is the integration point that makes automation possible at all. The common pipeline is a wanted-list manager feeding slskd through a bridge, then importing into the library. Be clear-eyed: this is unlicensed distribution, availability is inconsistent, and transfers depend on a stranger's upload queue.</li>
+    </ul>
+  </div>
+
+  <div class="note">
+    <span class="eyebrow">The design problem underneath</span>
+    None of these sources are instant. So stop designing for instant. The interesting product question is not "how do I make downloads fast" — it is "what should the interface do during the twenty minutes a download takes?"
+  </div>
+
+  <div class="block">
+    <h3>Three features that answer that question</h3>
+    <ul>
+      <li><strong>One search bar, tiered results.</strong> Type once and see <em>In your library</em> / <em>Free and legal</em> / <em>Available to buy</em> / <em>Findable elsewhere</em> as visibly distinct tiers. One tap means "I want this." A background worker fulfils it and tells you when it lands. The wishlist is the product, not a consolation prize.</li>
+      <li><strong>Lossy now, lossless later.</strong> The genuinely novel one. When you want something you don't have, start playing an immediately-available lossy source while the FLAC is acquired in the background, then silently upgrade the library entry when it arrives. The queue never blocks on a download. This is what makes it feel like a streaming service without lying about how fast downloads are.</li>
+      <li><strong>A transcode detector.</strong> A large share of "FLAC" in the wild is an MP3 in a costume. Run a spectral check on every incoming file — a lowpass energy heuristic catches a hard cutoff at 16kHz instantly — and flag or reject it before it pollutes your library. This is a real problem that real collectors deal with manually, and automating it is a clear differentiator.</li>
+    </ul>
+    <p>Everything arriving should pass through beets automatically: MusicBrainz match, acoustic fingerprint fallback, cover art, ReplayGain, then a library rescan. Import quality is what separates a collection from a folder.</p>
+  </div>
+
+  <div class="faceplate" style="margin-top:56px;">
+    <div class="faceplate-num">V3</div>
+    <div class="faceplate-body">
+      <div class="faceplate-name">It's in my pocket</div>
+      <div class="faceplate-sub">A real client on the phone, on and off the home network.</div>
+    </div>
+  </div>
+
+  <div class="block">
+    <h3>Two gates to clear first</h3>
+    <p><strong>HTTPS.</strong> Installable apps and offline caching require a secure context, and you cannot get a public certificate for a private IP address. Two clean paths: a mesh VPN that issues real certificates and also solves remote access outside the house, or your own domain with a DNS-based certificate challenge pointing at the private address. Solve this before you write the client; it is not an afterthought.</p>
+    <p><strong>Background audio.</strong> Covered above, and it is the fork in the road. Android and desktop are fine as an installed web app. iPhone is not — background playback needs a native shell with a proper audio-service integration. If iOS matters, budget for Flutter or React Native and treat the web app as the desktop client rather than trying to make one codebase do both badly.</p>
+  </div>
+
+  <div class="block">
+    <h3>What the phone unlocks</h3>
+    <ul class="tight">
+      <li><strong>Offline albums.</strong> Store FLAC where space allows, else transcode to Opus server-side. The Pi 5 does that far faster than real time.</li>
+      <li><strong>Network-aware quality.</strong> Lossless on the home network, Opus on cellular, switching automatically — and visibly, so you always know which one you're hearing.</li>
+      <li><strong>Handoff.</strong> Because the queue lives on the server, moving from laptop to phone mid-album is one tap. This is the feature that makes the whole system feel like one thing rather than three clients.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><span class="eyebrow">05 — The shelf</span><h2>Where this stops being a Navidrome skin</h2></div>
+  <p class="measure">You asked what would make it innovative. These are ordered roughly by payoff per hour. Pick two or three — a system that does a few unusual things exceptionally is far better than one that does everything adequately.</p>
+
+  <div class="shelf">
+    <div class="card">
+      <h3>Time-synced lyrics</h3>
+      <div class="chiprow"><span class="chip go"><span class="dot"></span>High payoff</span><span class="chip go"><span class="dot"></span>Low effort</span></div>
+      <p>LRCLIB offers around three million synced lyrics through a free API with no key and no account. A full-screen, well-typeset lyrics view is the single highest-delight feature available to you, and it is an afternoon's work.</p>
+    </div>
+    <div class="card">
+      <h3>Natural-language library search</h3>
+      <div class="chiprow"><span class="chip go"><span class="dot"></span>High payoff</span><span class="chip warn"><span class="dot"></span>Medium effort</span></div>
+      <p>"Something quiet for the evening." "Like Talk Talk, but earlier." Precompute embeddings of metadata and reviews on your laptop, store the vectors in SQLite next to the library, query them on the Pi. No GPU, no cloud, no subscription. This is the feature nothing else has.</p>
+    </div>
+    <div class="card">
+      <h3>Cover-art-driven interface</h3>
+      <div class="chiprow"><span class="chip go"><span class="dot"></span>High payoff</span><span class="chip go"><span class="dot"></span>Low effort</span></div>
+      <p>Extract a dominant colour from the current album's artwork and let the accent, the now-playing surface and the progress bar take it. The interface becomes the record you're playing. Constrain saturation so it never fights legibility.</p>
+    </div>
+    <div class="card">
+      <h3>Crate-digging mode</h3>
+      <div class="chiprow"><span class="chip go"><span class="dot"></span>Distinctive</span><span class="chip go"><span class="dot"></span>Low effort</span></div>
+      <p>An explicit anti-algorithm: one album at a time from what you haven't played in a year, no infinite scroll, no recommendations. You bought this music deliberately. The most valuable thing a private library can do is remind you what's in it.</p>
+    </div>
+    <div class="card">
+      <h3>Tap-to-play NFC cards</h3>
+      <div class="chiprow"><span class="chip warn"><span class="dot"></span>Delightful</span><span class="chip warn"><span class="dot"></span>Medium effort</span></div>
+      <p>Print album art onto NFC cards for about thirty cents each. Tap one with your phone and the album starts. Phones read NFC natively, so this needs no extra hardware at all — and it restores the physical, deliberate act of choosing a record.</p>
+    </div>
+    <div class="card">
+      <h3>Party queue by QR code</h3>
+      <div class="chiprow"><span class="chip go"><span class="dot"></span>Social</span><span class="chip go"><span class="dot"></span>Low effort</span></div>
+      <p>Guests scan a code and get a stripped-down page that can only add to the queue — no login, no app, no access to anything else. You keep veto rights. Solves a real problem that every host has.</p>
+    </div>
+    <div class="card">
+      <h3>Your own listening year</h3>
+      <div class="chiprow"><span class="chip warn"><span class="dot"></span>Medium payoff</span><span class="chip go"><span class="dot"></span>Low effort</span></div>
+      <p>Every play is logged on your own hardware. Real statistics from complete data, private by construction — and honest, unlike the marketing exercise you get from a streaming service. Sync to ListenBrainz if you want open recommendations back.</p>
+    </div>
+    <div class="card">
+      <h3>An ambient now-playing display</h3>
+      <div class="chiprow"><span class="chip warn"><span class="dot"></span>Charming</span><span class="chip stop"><span class="dot"></span>Scope creep</span></div>
+      <p>The spare Pi and a small panel or e-ink frame showing cover art and level meters, turning the system into a visible object in the room. Genuinely lovely. Also entirely optional — do it after v1 actually works, or it will eat v1.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><span class="eyebrow">06 — Briefing</span><h2>How to hand this to Claude Code</h2></div>
+
+  <p>Don't ask for the whole application in one prompt. Split it into three briefs that can each be judged on their own.</p>
+
+  <div class="block">
+    <h3>Brief one — the engine, headless</h3>
+    <p>A typed API client plus a playback engine with no interface at all: gapless scheduling through Web Audio, prefetch of the next track, ReplayGain application, Media Session wiring, and a server-authoritative queue. Ask for a test harness. Gapless bugs are the ones that will eat your weekends, and they are completely invisible in a screenshot — which means they are invisible to a model reviewing its own work visually.</p>
+  </div>
+
+  <div class="block">
+    <h3>Brief two — the design system, before any screens</h3>
+    <p>Give constraints, not adjectives. Dark-first, because people listen in the evening. Artwork is the largest element on every surface. One accent, derived from the current cover. Typography that survives a ninety-character classical track title without truncating into nonsense. Works at 400px and at 2000px. No CDN dependency of any kind, because this runs on a machine that may have no internet.</p>
+    <p>Ask for a token file and two or three static screens as plain HTML before a single component gets written. It is much cheaper to reject a direction at that stage.</p>
+  </div>
+
+  <div class="block">
+    <h3>Brief three — screens, one at a time</h3>
+    <p>Album view. Full-screen now-playing. Search. Queue. In that order, each against the finished token file. Resist asking for all four at once; the fourth will always be the weakest and you'll keep it anyway.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><span class="eyebrow">07 — Start here</span><h2>The first five moves</h2></div>
+  <ol class="moves">
+    <li>Order an SSD. The 64GB card is a dead end and everything you build on it has to move later anyway.</li>
+    <li>Run your existing FLACs through beets on your laptop — tags, artwork, ReplayGain, one folder convention — <em>before</em> anything reaches the Pi.</li>
+    <li>Stand up Navidrome on the Pi, on Ethernet, and listen to your library through any existing Subsonic client. You now have a working system, and everything after this is improvement rather than prerequisite.</li>
+    <li>Build the headless playback engine and prove gapless works on a live album. If this doesn't work, nothing else matters.</li>
+    <li>Only then design a single screen — the album view — and see whether you like using it enough to build the other three.</li>
+  </ol>
+</section>
+
+<footer>
+  <p><span class="eyebrow">Sources consulted</span></p>
+  <ul>
+    <li><a href="https://www.navidrome.org/docs/developers/subsonic-api/">Navidrome — Subsonic API compatibility</a></li>
+    <li><a href="https://forums.raspberrypi.com/viewtopic.php?t=357073">Raspberry Pi Forums — the missing 3.5mm jack on Pi 5</a></li>
+    <li><a href="https://raspberry.tips/en/raspberrypi-tutorials/raspberrypi-5-nvme-ssd-boot">Raspberry Pi 5 NVMe SSD setup and boot guide</a></li>
+    <li><a href="https://web.dev/articles/mse-seamless-playback">web.dev — Media Source Extensions for audio</a></li>
+    <li><a href="https://github.com/regosen/Gapless-5">Gapless-5 — HTML5 + Web Audio gapless player</a></li>
+    <li><a href="https://soularr.net/">Soularr — Lidarr to Soulseek bridge</a></li>
+    <li><a href="https://news.ycombinator.com/item?id=39480390">LRCLIB — free synced lyrics API</a></li>
+    <li><a href="https://github.com/snapcast/snapcast">Snapcast — synchronous multiroom audio</a></li>
+  </ul>
+</footer>
+
+</div>
