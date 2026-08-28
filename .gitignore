@@ -1,0 +1,32 @@
+# ── Music library: NEVER in git ──────────────────────────────
+# 10+ GB of audio will destroy this repo. Keep the library on disk,
+# back it up with restic, and keep git for code only.
+ss music/
+music/
+*.flac
+*.mp3
+*.wav
+*.m4a
+*.aiff
+*.ape
+
+# ── OS / editor cruft ────────────────────────────────────────
+.DS_Store
+desktop.ini
+Thumbs.db
+AlbumArt*.jpg
+AlbumArtSmall.jpg
+
+# ── Toolchain ────────────────────────────────────────────────
+node_modules/
+dist/
+.vite/
+__pycache__/
+*.pyc
+.venv/
+.env
+.env.*
+!.env.example
+
+nyx-staging/
+docs/

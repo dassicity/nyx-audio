@@ -1,0 +1,117 @@
+# Nyx Audio — beets configuration
+# Runs on your LAPTOP, not the Pi. See docs/library-migration.md
+#
+# Install to ~/.config/beets/config.yaml, or run with:
+#   beet -c /path/to/this/config.yaml import ...
+
+directory: ~/nyx-library
+library:   ~/nyx-library/beets.db
+
+# ── Path layout ────────────────────────────────────────────────
+# Decide this once. Changing it later means rewriting the whole tree.
+#
+# %aunique{}   disambiguates two albums with the same name
+# $original_year   1971, not 2015 — the year the music was made,
+#                  not the year of the remaster you happen to own
+# $multidisc   defined below; prefixes track numbers only on multi-disc sets
+
+item_fields:
+  multidisc: 1 if disctotal > 1 else 0
+
+paths:
+  default:   $albumartist/$album%aunique{} (%if{$original_year,$original_year,$year})/%if{$multidisc,$disc-}$track $title
+  comp:      Various Artists/$album%aunique{} (%if{$original_year,$original_year,$year})/%if{$multidisc,$disc-}$track $title
+  singleton: Singles/$artist/$title
+
+# Keep diacritics in filenames — APFS and ext4 handle UTF-8 fine,
+# and asciifying mangles half a serious collection.
+asciify_paths: no
+
+original_date: yes        # $original_year reflects first release
+per_disc_numbering: yes   # track 1 of disc 2 is "1", not "13"
+threaded: yes
+
+# ── Import behaviour ───────────────────────────────────────────
+import:
+  copy: yes         # copy into ~/nyx-library; never touch the originals
+  move: no
+  write: yes        # write corrected tags into the copies
+  incremental: yes  # skip dirs already imported — makes this resumable
+  resume: ask
+  log: ~/nyx-library/import.log
+  # Set quiet: yes only once you trust the matches. Not on the first pass.
+
+# ── Matching ───────────────────────────────────────────────────
+match:
+  strong_rec_thresh: 0.10   # auto-accept only very confident matches
+  preferred:
+    media: ['CD', 'Digital Media']
+    original_year: yes
+    # Adjust to where your pressings tend to come from:
+    countries: ['GB', 'US', 'XW']
+
+# NOTE: beets 2.x ships `plugins: [musicbrainz]` as its default, and this key
+# REPLACES that list rather than extending it. Omitting musicbrainz here leaves
+# beets with no metadata source at all, and every album reports "no match".
+plugins: >
+  musicbrainz
+  chroma
+  fetchart
+  lastgenre
+  replaygain
+  scrub
+  badfiles
+  duplicates
+  missing
+  edit
+  info
+  mbsync
+
+# ── Acoustic fingerprinting ────────────────────────────────────
+# Rescues albums with no usable tags at all. Needs `fpcalc` (chromaprint).
+chroma:
+  auto: yes
+
+# ── Cover art ──────────────────────────────────────────────────
+# Written as cover.jpg beside the files. Navidrome reads folder art.
+# Not embedded — do that later with `beet embedart` if you want
+# offline mobile portability.
+fetchart:
+  auto: yes
+  cautious: yes
+  cover_names: [cover, front, folder]
+  # beets 2.x requires a list here, not a space-separated string.
+  sources:
+    - filesystem
+    - coverart
+    - itunes
+    - albumart
+  maxwidth: 1400
+  enforce_ratio: 10%
+
+# ── Genres ─────────────────────────────────────────────────────
+# Last.fm top tags are, in practice, a better genre source than
+# MusicBrainz genres. nyx-api enriches further later.
+lastgenre:
+  auto: yes
+  source: album
+  count: 3
+  canonical: yes
+  whitelist: yes
+  separator: '; '
+  fallback: ''
+
+# ── Loudness ───────────────────────────────────────────────────
+# auto: no — run in bulk after import (`beet replaygain -a`).
+# Much faster batched, and it keeps the interactive import snappy.
+replaygain:
+  backend: ffmpeg
+  auto: no
+  overwrite: no
+
+# Strip junk tags before beets writes clean ones back.
+scrub:
+  auto: yes
+
+ui:
+  color: yes

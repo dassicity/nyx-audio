@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,300..600;1,7..72,300..500&amp;family=Alegreya+Sans:wght@400;500;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" />
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#14100c}
+:root{
+--f-disp:'Literata',Georgia,'Iowan Old Style','Times New Roman',serif;
+--f-body:'Alegreya Sans','Gill Sans','Trebuchet MS',Helvetica,sans-serif;
+--f-mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+--bg-0:oklch(0.168 0.022 52);--bg-1:oklch(0.212 0.026 48);--bg-2:oklch(0.256 0.030 46);--bg-3:oklch(0.318 0.034 44);
+--line:oklch(0.360 0.034 44);--line-soft:oklch(0.278 0.026 46);
+--txt-1:oklch(0.965 0.022 80);--txt-2:oklch(0.800 0.030 70);--txt-3:oklch(0.650 0.034 62);
+--sig:oklch(0.780 0.098 68);--pos:oklch(0.760 0.095 148);--warn:oklch(0.800 0.105 88);--neg:oklch(0.690 0.130 28);
+--r-1:3px;--r-2:6px;--r-3:10px;
+--dur-fast:120ms;--dur-mid:260ms;--dur-slow:620ms;--ease:cubic-bezier(.2,.7,.2,1);
+}
+[data-theme="light"]{
+--bg-0:oklch(0.968 0.019 78);--bg-1:oklch(0.940 0.024 76);--bg-2:oklch(0.905 0.029 74);--bg-3:oklch(0.862 0.034 70);
+--line:oklch(0.838 0.032 68);--line-soft:oklch(0.892 0.026 74);
+--txt-1:oklch(0.245 0.026 48);--txt-2:oklch(0.445 0.029 52);--txt-3:oklch(0.578 0.031 56);
+--sig:oklch(0.520 0.110 58);--pos:oklch(0.495 0.100 148);--warn:oklch(0.560 0.110 78);--neg:oklch(0.520 0.150 28);
+}
+a{color:var(--sig);text-decoration:none}a:hover{color:var(--txt-1)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0;text-align:left}
+input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--sig);outline-offset:2px}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--bg-3);border-radius:9px}::-webkit-scrollbar-track{background:transparent}
+@keyframes nyxfade{from{opacity:0}to{opacity:1}}
+@keyframes nyxrise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes nyxup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes nyxslide{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes nyxdrift{0%{transform:translate3d(-2%,1%,0) scale(1.03)}50%{transform:translate3d(3%,-2.5%,0) scale(1.07)}100%{transform:translate3d(-2%,1%,0) scale(1.03)}}
+@keyframes nyxpulse{0%{opacity:.35}50%{opacity:.75}100%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:1ms!important}}
+</style>
+</helmet>
+<div data-theme="{{ theme }}" style="height:100vh;display:flex;flex-direction:column;background:var(--bg-0);color:var(--txt-1);font-family:var(--f-body);font-size:15.5px;overflow:hidden">
+
+  <div style="display:flex;flex-wrap:nowrap;align-items:center;gap:14px;padding:0 16px;height:34px;flex:0 0 34px;overflow:hidden;border-bottom:1px solid var(--line-soft);background:var(--bg-1);font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;color:var(--txt-3);text-transform:uppercase">
+    <span style="color:var(--txt-2);white-space:nowrap">Nyx Audio · prototype</span>
+    <div style="display:flex;gap:2px;flex:0 0 auto">
+      <button onClick="{{ setDesktop }}" style="{{ tab.desktop }}">Desktop</button>
+      <button onClick="{{ setMobile }}" style="{{ tab.mobile }}">Mobile</button>
+    </div>
+    <div style="display:flex;gap:2px;flex:0 0 auto">
+      <button onClick="{{ setDark }}" style="{{ tab.dark }}">Night</button>
+      <button onClick="{{ setLight }}" style="{{ tab.light }}">Day</button>
+    </div>
+    <button onClick="{{ openAmbient }}" style="border:1px solid var(--line);padding:3px 8px;border-radius:var(--r-1);white-space:nowrap;flex:0 0 auto">Ambient display</button>
+    <button onClick="{{ toggleCmd }}" style="border:1px solid var(--line);padding:3px 8px;border-radius:var(--r-1);white-space:nowrap;flex:0 0 auto">⌘K</button>
+    <button onClick="{{ toggleKeys }}" style="border:1px solid var(--line);padding:3px 8px;border-radius:var(--r-1);white-space:nowrap">Shortcuts</button>
+    <span style="margin-left:auto;min-width:0;color:var(--txt-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sig.line }}</span>
+  </div>
+
+  <div style="{{ wrapStyle }}">
+    <div style="{{ frameOuter }}">
+      <div style="{{ frameInner }}">
+
+        <div style="{{ railStyle }}">
+          <div style="padding:22px 18px 16px 18px">
+            <div style="font-family:var(--f-disp);font-size:26px;letter-spacing:.14em;line-height:1;font-weight:400">NYX</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+              <div style="height:1px;flex:1;background:var(--line)"></div>
+              <div style="font-family:var(--f-mono);font-size:9px;letter-spacing:.22em;color:var(--txt-3)">AUDIO</div>
+            </div>
+          </div>
+          <nav style="display:flex;flex-direction:column;gap:1px;padding:0 8px;flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden" aria-label="Library">
+            <sc-for list="{{ nav }}" as="n" hint-placeholder-count="9">
+              <button onClick="{{ n.go }}" style="{{ n.style }}">
+                <span style="font-family:var(--f-mono);font-size:9.5px;color:var(--txt-3);width:20px;flex:0 0 20px">{{ n.code }}</span>
+                <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ n.label }}</span>
+                <span style="font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);font-variant-numeric:tabular-nums">{{ n.count }}</span>
+              </button>
+            </sc-for>
+          </nav>
+          <div style="flex:0 0 auto;padding:14px 18px;border-top:1px solid var(--line-soft);font-family:var(--f-mono);font-size:10px;line-height:1.7;color:var(--txt-3)">
+            <div>{{ libStat.albums }} albums · {{ libStat.tracks }} tracks</div>
+            <div>{{ libStat.size }} · Pi 5 · navidrome</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:4px"><span style="width:5px;height:5px;border-radius:50%;background:var(--pos)"></span>{{ libStat.status }}</div>
+          </div>
+        </div>
+
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+          <div style="{{ washStyle }}"></div>
+          <div style="{{ scrollStyle }}">
+
+            <sc-if value="{{ scr.home }}" hint-placeholder-val="{{ true }}">
+              <div style="{{ padStyle }}">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap">
+                  <h1 style="font-family:var(--f-disp);font-weight:300;font-size:34px;margin:0;letter-spacing:-.01em">{{ home.greeting }}</h1>
+                  <div style="font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);letter-spacing:.06em">{{ home.stamp }}</div>
+                </div>
+                <div style="height:1px;background:var(--line-soft);margin:18px 0 26px"></div>
+
+                <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);margin-bottom:12px">Continue listening</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px">
+                  <sc-for list="{{ home.cont }}" as="a" hint-placeholder-count="3">
+                    <button onClick="{{ a.play }}" style="display:flex;gap:12px;align-items:center;padding:8px;border:1px solid var(--line-soft);border-radius:var(--r-2);background:var(--bg-1)" style-hover="border-color:var(--line);background:var(--bg-2)">
+                      <span style="{{ a.thumb56 }}"></span>
+                      <span style="min-width:0;flex:1">
+                        <span style="display:block;font-family:var(--f-disp);font-size:16px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.title }}</span>
+                        <span style="display:block;font-size:11.5px;color:var(--txt-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.artist }}</span>
+                        <span style="display:block;font-family:var(--f-mono);font-size:9.5px;color:var(--txt-3);margin-top:3px">{{ a.resume }}</span>
+                      </span>
+                    </button>
+                  </sc-for>
+                </div>
+
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px;margin-top:34px">
+                  <div>
+                    <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);margin-bottom:12px">Today's crate pick</div>
+                    <button onClick="{{ goCrate }}" style="display:flex;gap:16px;width:100%;padding:14px;border:1px solid var(--line);border-radius:var(--r-2);background:var(--bg-1)">
+                      <span style="{{ home.pick.thumb96 }}"></span>
+                      <span style="flex:1;min-width:0">
+                        <span style="display:block;font-family:var(--f-disp);font-size:20px;line-height:1.15">{{ home.pick.title }}</span>
+                        <span style="display:block;font-size:12px;color:var(--txt-2);margin-top:2px">{{ home.pick.artist }}</span>
+                        <span style="display:block;font-family:var(--f-mono);font-size:10px;color:var(--txt-3);margin-top:10px;line-height:1.6">{{ home.pick.reason }}</span>
+                      </span>
+                    </button>
+                    <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);margin:26px 0 12px">On this day</div>
+                    <div style="display:flex;flex-direction:column">
+                      <sc-for list="{{ home.onThisDay }}" as="r" hint-placeholder-count="3">
+                        <div style="display:flex;gap:12px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line-soft)">
+                          <span style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3);width:38px;flex:0 0 38px">{{ r.year }}</span>
+                          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.title }}</span>
+                          <span style="font-size:11.5px;color:var(--txt-2);max-width:35%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.artist }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);margin-bottom:12px">Recently added</div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px">
+                      <sc-for list="{{ home.recent }}" as="a" hint-placeholder-count="8">
+                        <button onClick="{{ a.open }}" title="{{ a.title }}" style="display:block;width:100%">
+                          <span style="{{ a.thumbFull }}"></span>
+                          <span style="display:block;font-size:10.5px;color:var(--txt-2);margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.title }}</span>
+                        </button>
+                      </sc-for>
+                    </div>
+                    <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);margin:26px 0 12px">Unplayed longest</div>
+                    <div style="display:flex;flex-direction:column">
+                      <sc-for list="{{ home.stale }}" as="a" hint-placeholder-count="4">
+                        <button onClick="{{ a.open }}" style="display:flex;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line-soft)">
+                          <span style="{{ a.thumb36 }}"></span>
+                          <span style="flex:1;min-width:0"><span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.title }}</span><span style="display:block;font-size:11px;color:var(--txt-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.artist }}</span></span>
+                          <span style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3);font-variant-numeric:tabular-nums">{{ a.ago }}</span>
+                        </button>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ scr.albums }}">
+              <div style="{{ padStyle }}">
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+                  <h1 style="font-family:var(--f-disp);font-weight:300;font-size:34px;margin:0">Albums</h1>
+                  <div style="font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);font-variant-numeric:tabular-nums">{{ grid.count }}</div>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:16px 0 22px;padding-bottom:14px;border-bottom:1px solid var(--line-soft)">
+                  <sc-for list="{{ grid.sorts }}" as="s" hint-placeholder-count="4">
+                    <button onClick="{{ s.go }}" style="{{ s.style }}">{{ s.label }}</button>
+                  </sc-for>
+                  <span style="width:1px;height:18px;background:var(--line);margin:0 6px"></span>
+                  <sc-for list="{{ grid.densities }}" as="s" hint-placeholder-count="3">
+                    <button onClick="{{ s.go }}" style="{{ s.style }}">{{ s.label }}</button>
+                  </sc-for>
+                  <span style="width:1px;height:18px;background:var(--line);margin:0 6px"></span>
+                  <button onClick="{{ grid.toggleBig }}" style="{{ grid.bigStyle }}">{{ grid.bigLabel }}</button>
+                </div>
+                <div style="{{ grid.style }}">
+                  <sc-for list="{{ grid.items }}" as="a" hint-placeholder-count="18">
+                    <button onClick="{{ a.open }}" title="{{ a.tip }}" style="display:block;width:100%;text-align:left">
+                      <span style="{{ a.thumbFull }}"></span>
+                      <sc-if value="{{ a.labels }}" hint-placeholder-val="{{ true }}">
+                        <span style="display:block;margin-top:7px">
+                          <span style="display:block;font-family:var(--f-disp);font-size:14.5px;line-height:1.25;max-height:2.5em;overflow:hidden">{{ a.title }}</span>
+                          <span style="display:flex;gap:6px;align-items:baseline;margin-top:2px">
+                            <span style="flex:1;min-width:0;font-size:11px;color:var(--txt-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.artist }}</span>
+                            <span style="font-family:var(--f-mono);font-size:9.5px;color:var(--txt-3)">{{ a.year }}</span>
+                          </span>
+                        </span>
+                      </sc-if>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ scr.album }}">
+              <div style="{{ padStyle }}">
+                <div style="display:flex;gap:34px;flex-wrap:wrap">
+                  <div style="{{ det.artWrap }}">
+                    <div style="{{ det.glow }}"></div>
+                    <button onClick="{{ det.flip }}" style="{{ det.artStyle }}" aria-label="Flip sleeve">
+                      <sc-if value="{{ det.noArt }}" hint-placeholder-val="{{ false }}">
+                        <span style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:16px;background:repeating-linear-gradient(135deg,var(--bg-2) 0 6px,var(--bg-1) 6px 12px)">
+                          <span style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3);letter-spacing:.1em">NO ARTWORK</span>
+                          <span style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3)">cover.jpg not found</span>
+                        </span>
+                      </sc-if>
+                      <sc-if value="{{ det.typeCover }}" hint-placeholder-val="{{ false }}">
+                        <span style="position:absolute;inset:0;display:grid;place-items:center;font-family:var(--f-disp);font-size:120px;line-height:1;color:var(--txt-1);opacity:.9">{{ det.letter }}</span>
+                      </sc-if>
+                    </button>
+                    <div style="font-family:var(--f-mono);font-size:9.5px;color:var(--txt-3);margin-top:10px;letter-spacing:.06em">{{ det.flipHint }}</div>
+                  </div>
+                  <div style="flex:1;min-width:260px;display:flex;flex-direction:column;justify-content:flex-end">
+                    <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3)">{{ det.kicker }}</div>
+                    <h1 style="{{ det.titleStyle }}">{{ det.title }}</h1>
+                    <button onClick="{{ det.openArtist }}" style="font-family:var(--f-disp);font-size:20px;color:var(--txt-2);margin-top:6px;width:fit-content" style-hover="color:var(--txt-1)">{{ det.artist }}</button>
+                    <div style="display:flex;gap:14px;flex-wrap:wrap;font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);margin-top:14px;font-variant-numeric:tabular-nums">
+                      <span>{{ det.year }}</span><span>{{ det.genre }}</span><span>{{ det.trackCount }}</span><span>{{ det.runtime }}</span><span style="color:var(--txt-2)">{{ det.fmt }}</span>
+                    </div>
+                    <div style="font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);margin-top:10px;line-height:1.7;max-width:60ch">{{ det.provenance }}</div>
+                    <div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">
+                      <button onClick="{{ det.play }}" style="display:flex;align-items:center;gap:9px;padding:10px 18px;min-height:44px;border-radius:var(--r-2);background:var(--txt-1);color:var(--bg-0);font-weight:600">
+                        <span style="width:0;height:0;border-left:10px solid currentColor;border-top:6px solid transparent;border-bottom:6px solid transparent"></span>Play
+                      </button>
+                      <button onClick="{{ det.queue }}" style="padding:10px 16px;min-height:44px;border-radius:var(--r-2);border:1px solid var(--line);color:var(--txt-2)" style-hover="color:var(--txt-1);border-color:var(--txt-3)">Add to queue</button>
+                      <button onClick="{{ det.fav }}" style="padding:10px 16px;min-height:44px;border-radius:var(--r-2);border:1px solid var(--line);color:var(--txt-2)" style-hover="color:var(--txt-1)">{{ det.favLabel }}</button>
+                    </div>
+                  </div>
+                </div>
+
+                <sc-if value="{{ det.front }}" hint-placeholder-val="{{ true }}">
+                  <div style="margin-top:36px;animation:nyxfade var(--dur-mid) var(--ease)">
+                    <div style="display:flex;gap:12px;align-items:baseline;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);padding-bottom:8px;border-bottom:1px solid var(--line)">
+                      <span style="width:30px">#</span><span style="flex:1">Title</span><span style="{{ det.vaCol }}">Artist</span><span style="width:120px;text-align:right">Format</span><span style="width:56px;text-align:right">Plays</span><span style="width:54px;text-align:right">Time</span>
+                    </div>
+                    <sc-for list="{{ det.tracks }}" as="t" hint-placeholder-count="8">
+                      <button onClick="{{ t.play }}" style="{{ t.row }}">
+                        <span style="width:30px;flex:0 0 30px;font-family:var(--f-mono);font-size:11px;color:var(--txt-3);font-variant-numeric:tabular-nums">{{ t.no }}</span>
+                        <span style="flex:1;min-width:0;font-size:14.5px;line-height:1.35;text-wrap:pretty">{{ t.title }}</span>
+                        <span style="{{ t.vaCol }}">{{ t.artist }}</span>
+                        <span style="width:120px;flex:0 0 120px;text-align:right;font-family:var(--f-mono);font-size:10px;color:var(--txt-3)">{{ t.fmt }}</span>
+                        <span style="width:56px;flex:0 0 56px;text-align:right;font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);font-variant-numeric:tabular-nums">{{ t.plays }}</span>
+                        <span style="width:54px;flex:0 0 54px;text-align:right;font-family:var(--f-mono);font-size:10.5px;color:var(--txt-2);font-variant-numeric:tabular-nums">{{ t.dur }}</span>
+                      </button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ det.back }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:36px;max-width:74ch;animation:nyxrise var(--dur-mid) var(--ease)">
+                    <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);padding-bottom:10px;border-bottom:1px solid var(--line)">Back of sleeve</div>
+                    <p style="font-family:var(--f-disp);font-size:17px;line-height:1.65;color:var(--txt-2);text-wrap:pretty">{{ det.note }}</p>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:22px;margin-top:22px">
+                      <sc-for list="{{ det.credits }}" as="c" hint-placeholder-count="4">
+                        <div>
+                          <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--txt-3)">{{ c.role }}</div>
+                          <div style="font-size:13.5px;color:var(--txt-1);margin-top:4px;line-height:1.5">{{ c.name }}</div>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="margin-top:26px;padding-top:16px;border-top:1px solid var(--line-soft);font-family:var(--f-mono);font-size:10.5px;line-height:1.9;color:var(--txt-3)">
+                      <sc-for list="{{ det.tech }}" as="r" hint-placeholder-count="5">
+                        <div style="display:flex;gap:16px"><span style="width:150px;flex:0 0 150px">{{ r.k }}</span><span style="color:var(--txt-2)">{{ r.v }}</span></div>
+                      </sc-for>
+                    </div>
+                    <div style="{{ det.bioStyle }}">{{ det.bio }}</div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ scr.artists }}">
+              <div style="{{ padStyle }}">
+                <h1 style="font-family:var(--f-disp);font-weight:300;font-size:34px;margin:0 0 18px">Artists</h1>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0 26px;border-top:1px solid var(--line-soft)">
+                  <sc-for list="{{ artists }}" as="a" hint-placeholder-count="20">
+                    <button onClick="{{ a.open }}" style="display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line-soft)" style-hover="color:var(--sig)">
+                      <span style="{{ a.thumb36 }}"></span>
+                      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.name }}</span>
+                      <span style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3);font-variant-numeric:tabular-nums">{{ a.meta }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ scr.artist }}">
+              <div style="{{ padStyle }}">
+                <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3)">Artist</div>
+                <h1 style="font-family:var(--f-disp);font-weight:300;font-size:46px;margin:6px 0 0;line-height:1.05">{{ art.name }}</h1>
+                <div style="font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);margin-top:12px;font-variant-numeric:tabular-nums">{{ art.meta }}</div>
+                <div style="{{ art.bioStyle }}">{{ art.bio }}</div>
+                <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);margin:30px 0 12px">Discography · release order</div>
+                <div style="display:flex;flex-direction:column;border-top:1px solid var(--line-soft)">
+                  <sc-for list="{{ art.albums }}" as="a" hint-placeholder-count="6">
+                    <button onClick="{{ a.open }}" style="display:flex;gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line-soft)">
+                      <span style="font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);width:38px;flex:0 0 38px;font-variant-numeric:tabular-nums">{{ a.year }}</span>
+                      <span style="{{ a.thumb36 }}"></span>
+                      <span style="flex:1;min-width:0;font-family:var(--f-disp);font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.title }}</span>
+                      <span style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3);font-variant-numeric:tabular-nums">{{ a.plays }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ scr.genres }}">
+              <div style="{{ padStyle }}">
+                <h1 style="font-family:var(--f-disp);font-weight:300;font-size:34px;margin:0 0 4px">Genres</h1>
+                <div style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3);margin-bottom:20px">enriched from musicbrainz · file tags ignored</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px">
+                  <sc-for list="{{ genres }}" as="g" hint-placeholder-count="7">
+                    <button onClick="{{ g.go }}" style="{{ g.style }}">
+                      <span style="display:block;font-family:var(--f-disp);font-size:22px;line-height:1.1">{{ g.name }}</span>
+                      <span style="display:block;font-family:var(--f-mono);font-size:10px;color:var(--txt-3);margin-top:6px;font-variant-numeric:tabular-nums">{{ g.meta }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ scr.playlists }}">
+              <div style="{{ padStyle }}">
+                <h1 style="font-family:var(--f-disp);font-weight:300;font-size:34px;margin:0 0 18px">Playlists</h1>
+                <div style="display:flex;flex-direction:column;border-top:1px solid var(--line-soft);max-width:760px">
+                  <sc-for list="{{ playlists }}" as="p" hint-placeholder-count="6">
+                    <div style="display:flex;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line-soft)">
+                      <span style="{{ p.thumb36 }}"></span>
+                      <span style="flex:1;min-width:0"><span style="display:block;font-family:var(--f-disp);font-size:17px">{{ p.name }}</span><span style="display:block;font-family:var(--f-mono);font-size:10px;color:var(--txt-3);margin-top:2px">{{ p.meta }}</span></span>
+                      <span style="{{ p.tagStyle }}">{{ p.tag }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ scr.fav }}">
+              <div style="{{ padStyle }}">
+                <h1 style="font-family:var(--f-disp);font-weight:300;font-size:34px;margin:0 0 4px">Favourites</h1>
+                <div style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3);margin-bottom:20px">{{ favs.meta }}</div>
+                <div style="{{ grid.styleFixed }}">
+                  <sc-for list="{{ favs.items }}" as="a" hint-placeholder-count="10">
+                    <button onClick="{{ a.open }}" style="display:block;width:100%">
+                      <span style="{{ a.thumbFull }}"></span>
+                      <span style="display:block;font-family:var(--f-disp);font-size:14px;margin-top:6px;line-height:1.25;max-height:2.5em;overflow:hidden">{{ a.title }}</span>
+                      <span style="display:block;font-size:11px;color:var(--txt-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.artist }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ scr.search }}">
+              <div style="{{ padStyle }}">
+                <div style="display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px;max-width:820px">
+                  <span style="font-family:var(--f-mono);font-size:11px;color:var(--txt-3)">/</span>
+                  <input value="{{ search.q }}" onChange="{{ search.onInput }}" placeholder="Search 56 albums, 641 tracks…" aria-label="Search library" style="flex:1;background:none;border:0;outline:none;font-family:var(--f-disp);font-size:26px;font-weight:300;color:var(--txt-1)" />
+                  <button onClick="{{ search.askToggle }}" style="{{ search.askStyle }}">Ask mode</button>
+                </div>
+                <sc-if value="{{ search.ask }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:26px;max-width:760px;border:1px dashed var(--line);border-radius:var(--r-3);padding:22px;opacity:.72">
+                    <div style="display:flex;align-items:center;gap:10px"><span style="{{ soon.pill }}">Planned</span><span style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3)">natural-language search · v1.2</span></div>
+                    <div style="font-family:var(--f-disp);font-size:22px;margin-top:16px;color:var(--txt-2)">“Something quiet for the evening.”</div>
+                    <div style="display:flex;gap:7px;align-items:center;margin-top:18px;font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3)">
+                      <span style="width:6px;height:6px;border-radius:50%;background:var(--txt-3);animation:nyxpulse 1.6s infinite"></span>reading 56 sleeves, 641 tracks, 14 months of history…
+                    </div>
+                    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line-soft)">
+                      <sc-for list="{{ search.askResults }}" as="r" hint-placeholder-count="3">
+                        <div style="display:flex;gap:12px;padding:9px 0">
+                          <span style="{{ r.thumb36 }}"></span>
+                          <span style="flex:1;min-width:0"><span style="display:block;font-family:var(--f-disp);font-size:16px">{{ r.title }}</span><span style="display:block;font-family:var(--f-mono);font-size:10px;color:var(--txt-3);margin-top:3px">{{ r.why }}</span></span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div style="margin-top:20px;max-width:760px;border:1px dashed var(--line);border-radius:var(--r-3);padding:22px;opacity:.72">
+                    <div style="display:flex;align-items:center;gap:10px"><span style="{{ soon.pill }}">Planned</span><span style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3)">results beyond your shelves · v1.4</span></div>
+                    <sc-for list="{{ search.tiers }}" as="t" hint-placeholder-count="4">
+                      <div style="margin-top:16px">
+                        <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--txt-3)">{{ t.tier }}</div>
+                        <div style="display:flex;gap:10px;align-items:center;margin-top:7px;padding:9px 0;border-top:1px solid var(--line-soft)">
+                          <span style="{{ t.thumb36 }}"></span>
+                          <span style="flex:1;min-width:0"><span style="display:block">{{ t.title }}</span><span style="display:block;font-size:11px;color:var(--txt-3)">{{ t.artist }}</span></span>
+                          <span style="{{ t.stateStyle }}">{{ t.state }}</span>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ search.empty }}" hint-placeholder-val="{{ true }}">
+                  <div style="margin-top:30px">
+                    <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);margin-bottom:10px">Recent searches</div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                      <sc-for list="{{ search.recents }}" as="r" hint-placeholder-count="5">
+                        <button onClick="{{ r.go }}" style="padding:8px 13px;border:1px solid var(--line);border-radius:99px;font-size:12.5px;color:var(--txt-2);min-height:36px" style-hover="color:var(--txt-1);border-color:var(--txt-3)">{{ r.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ search.none }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:40px;max-width:52ch">
+                    <div style="font-family:var(--f-disp);font-size:24px;font-weight:300">Nothing in the library matches that.</div>
+                    <div style="font-family:var(--f-mono);font-size:11px;color:var(--txt-3);margin-top:12px;line-height:1.8">56 albums searched · titles, artists, tracks, credits<br />This library is finite. That's the point.</div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ search.hasResults }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:28px;display:flex;flex-direction:column;gap:26px">
+                    <sc-for list="{{ search.groups }}" as="g" hint-placeholder-count="2">
+                      <div>
+                        <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);padding-bottom:8px;border-bottom:1px solid var(--line)">{{ g.label }}</div>
+                        <sc-for list="{{ g.items }}" as="r" hint-placeholder-count="3">
+                          <button onClick="{{ r.open }}" style="display:flex;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line-soft);width:100%">
+                            <span style="{{ r.thumb36 }}"></span>
+                            <span style="flex:1;min-width:0"><span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.title }}</span><span style="display:block;font-size:11px;color:var(--txt-3)">{{ r.sub }}</span></span>
+                            <span style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3)">{{ r.meta }}</span>
+                          </button>
+                        </sc-for>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ scr.crate }}">
+              <div style="{{ crate.wrap }}">
+                <sc-if value="{{ crate.hasCard }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-direction:column;align-items:center;max-width:560px;width:100%;animation:nyxrise var(--dur-slow) var(--ease)">
+                    <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);margin-bottom:20px">Crate · {{ crate.session }}</div>
+                    <div style="position:relative;width:100%;max-width:420px">
+                      <div style="{{ crate.stack2 }}"></div>
+                      <div style="{{ crate.stack1 }}"></div>
+                      <div style="{{ crate.card }}"></div>
+                    </div>
+                    <div style="text-align:center;margin-top:24px">
+                      <div style="font-family:var(--f-disp);font-size:30px;font-weight:300;line-height:1.15;text-wrap:pretty">{{ crate.title }}</div>
+                      <div style="font-size:14px;color:var(--txt-2);margin-top:4px">{{ crate.artist }}</div>
+                      <div style="font-family:var(--f-mono);font-size:11.5px;color:var(--txt-2);margin-top:18px;line-height:1.7;max-width:44ch">{{ crate.reason }}</div>
+                      <div style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3);margin-top:8px">{{ crate.tech }}</div>
+                    </div>
+                    <div style="display:flex;gap:10px;margin-top:26px;flex-wrap:wrap;justify-content:center">
+                      <button onClick="{{ crate.play }}" style="padding:12px 24px;min-height:44px;border-radius:var(--r-2);background:var(--txt-1);color:var(--bg-0);font-weight:600">Pull it out</button>
+                      <button onClick="{{ crate.next }}" style="padding:12px 20px;min-height:44px;border-radius:var(--r-2);border:1px solid var(--line);color:var(--txt-2)">Keep digging</button>
+                      <button onClick="{{ crate.bury }}" style="padding:12px 20px;min-height:44px;border-radius:var(--r-2);border:1px solid var(--line);color:var(--txt-3)">Bury for a year</button>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ crate.done }}" hint-placeholder-val="{{ false }}">
+                  <div style="max-width:460px;text-align:center;animation:nyxfade var(--dur-slow)">
+                    <div style="font-family:var(--f-disp);font-size:32px;font-weight:300">{{ crate.doneTitle }}</div>
+                    <div style="font-family:var(--f-mono);font-size:11.5px;color:var(--txt-3);margin-top:16px;line-height:2">{{ crate.doneBody }}</div>
+                    <div style="display:flex;gap:26px;justify-content:center;margin-top:28px;padding-top:22px;border-top:1px solid var(--line-soft)">
+                      <sc-for list="{{ crate.summary }}" as="s" hint-placeholder-count="3">
+                        <div><div style="font-family:var(--f-mono);font-size:30px;font-variant-numeric:tabular-nums">{{ s.n }}</div><div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--txt-3);margin-top:4px">{{ s.label }}</div></div>
+                      </sc-for>
+                    </div>
+                    <button onClick="{{ crate.reset }}" style="margin-top:28px;padding:11px 20px;min-height:44px;border:1px solid var(--line);border-radius:var(--r-2);color:var(--txt-2)">Start a new dig</button>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ scr.stats }}">
+              <div style="{{ padStyle }}">
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap">
+                  <h1 style="font-family:var(--f-disp);font-weight:300;font-size:34px;margin:0">Statistics</h1>
+                  <div style="display:flex;gap:2px">
+                    <sc-for list="{{ stats.ranges }}" as="r" hint-placeholder-count="4">
+                      <button onClick="{{ r.go }}" style="{{ r.style }}">{{ r.label }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="{{ stats.kpiGrid }}">
+                  <sc-for list="{{ stats.kpis }}" as="k" hint-placeholder-count="5">
+                    <div style="background:var(--bg-1);padding:16px;min-width:0">
+                      <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--txt-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ k.label }}</div>
+                      <div style="font-family:var(--f-mono);font-size:22px;margin-top:8px;font-variant-numeric:tabular-nums;white-space:nowrap">{{ k.value }}</div>
+                      <div style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3);margin-top:2px">{{ k.sub }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:26px">
+                  <div>
+                    <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);padding-bottom:8px;border-bottom:1px solid var(--line)">Listening clock · hour × weekday</div>
+                    <div style="display:flex;gap:6px;margin-top:12px">
+                      <div style="display:flex;flex-direction:column;gap:2px;font-family:var(--f-mono);font-size:9px;color:var(--txt-3);padding-top:1px">
+                        <sc-for list="{{ stats.days }}" as="d" hint-placeholder-count="7"><div style="height:14px;line-height:14px">{{ d.label }}</div></sc-for>
+                      </div>
+                      <div style="flex:1;display:grid;grid-template-columns:repeat(24,1fr);gap:2px">
+                        <sc-for list="{{ stats.clock }}" as="c" hint-placeholder-count="168"><div title="{{ c.tip }}" style="{{ c.style }}"></div></sc-for>
+                      </div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:9px;color:var(--txt-3);margin-top:6px;padding-left:26px"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
+                    <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);padding-bottom:8px;border-bottom:1px solid var(--line);margin-top:30px">Format of what I actually played</div>
+                    <div style="margin-top:14px;display:flex;flex-direction:column;gap:12px">
+                      <sc-for list="{{ stats.formats }}" as="f" hint-placeholder-count="3">
+                        <div>
+                          <div style="display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:11px"><span>{{ f.label }}</span><span style="color:var(--txt-3);font-variant-numeric:tabular-nums">{{ f.pct }}</span></div>
+                          <div style="height:6px;background:var(--bg-2);border-radius:99px;margin-top:6px;overflow:hidden"><div style="{{ f.bar }}"></div></div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);padding-bottom:8px;border-bottom:1px solid var(--line)">Top artists</div>
+                    <sc-for list="{{ stats.topArtists }}" as="a" hint-placeholder-count="6">
+                      <div style="display:flex;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line-soft)">
+                        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.name }}</span>
+                        <span style="width:38%;height:5px;background:var(--bg-2);border-radius:99px;overflow:hidden"><span style="{{ a.bar }}"></span></span>
+                        <span style="font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);width:44px;text-align:right;font-variant-numeric:tabular-nums">{{ a.plays }}</span>
+                      </div>
+                    </sc-for>
+                    <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);padding-bottom:8px;border-bottom:1px solid var(--line);margin-top:30px">Genre distribution</div>
+                    <div style="display:flex;height:10px;margin-top:14px;border-radius:99px;overflow:hidden">
+                      <sc-for list="{{ stats.genres }}" as="g" hint-placeholder-count="6"><div title="{{ g.tip }}" style="{{ g.seg }}"></div></sc-for>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:14px">
+                      <sc-for list="{{ stats.genres }}" as="g" hint-placeholder-count="6">
+                        <div style="display:flex;align-items:center;gap:7px;font-family:var(--f-mono);font-size:10.5px;color:var(--txt-2)"><span style="{{ g.dot }}"></span>{{ g.label }}</div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+                <div style="margin-top:34px;padding:22px;border:1px solid var(--line);border-radius:var(--r-3);display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+                  <div style="flex:1;min-width:220px">
+                    <div style="font-family:var(--f-disp);font-size:24px;font-weight:300">Your listening year, 2026</div>
+                    <div style="font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);margin-top:8px;line-height:1.7">Eleven chapters. Written from your own history. Not for posting anywhere.</div>
+                  </div>
+                  <button onClick="{{ goYear }}" style="padding:12px 22px;min-height:44px;border-radius:var(--r-2);background:var(--txt-1);color:var(--bg-0);font-weight:600">Read it</button>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ scr.year }}">
+              <div style="scroll-snap-type:y mandatory;overflow-y:auto;height:100%">
+                <sc-for list="{{ year.frames }}" as="f" hint-placeholder-count="5">
+                  <section style="{{ f.style }}">
+                    <div style="max-width:660px;width:100%">
+                      <div style="display:flex;align-items:center;gap:14px">
+                        <span style="font-family:var(--f-mono);font-size:10px;letter-spacing:.2em;color:var(--txt-3)">{{ f.chapter }}</span>
+                        <span style="height:1px;flex:1;background:var(--line)"></span>
+                        <span style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3)">{{ f.season }}</span>
+                      </div>
+                      <h2 style="font-family:var(--f-disp);font-size:44px;font-weight:300;line-height:1.1;margin:22px 0 0;text-wrap:pretty">{{ f.title }}</h2>
+                      <p style="font-family:var(--f-disp);font-size:19px;line-height:1.7;color:var(--txt-2);margin:20px 0 0;text-wrap:pretty">{{ f.body }}</p>
+                      <div style="display:flex;gap:34px;flex-wrap:wrap;margin-top:30px;padding-top:20px;border-top:1px solid var(--line-soft)">
+                        <sc-for list="{{ f.figures }}" as="g" hint-placeholder-count="2">
+                          <div><div style="font-family:var(--f-mono);font-size:32px;font-variant-numeric:tabular-nums">{{ g.n }}</div><div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--txt-3);margin-top:4px">{{ g.label }}</div></div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </section>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ scr.settings }}">
+              <div style="{{ padStyle }}">
+                <h1 style="font-family:var(--f-disp);font-weight:300;font-size:34px;margin:0 0 22px">Settings</h1>
+                <div style="max-width:760px;display:flex;flex-direction:column;gap:30px">
+                  <sc-for list="{{ settings }}" as="s" hint-placeholder-count="6">
+                    <div>
+                      <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);padding-bottom:8px;border-bottom:1px solid var(--line)">{{ s.section }}</div>
+                      <sc-for list="{{ s.rows }}" as="r" hint-placeholder-count="3">
+                        <div style="display:flex;gap:16px;align-items:center;padding:13px 0;border-bottom:1px solid var(--line-soft)">
+                          <span style="flex:1;min-width:0"><span style="display:block;font-size:13.5px">{{ r.label }}</span><span style="display:block;font-family:var(--f-mono);font-size:10px;color:var(--txt-3);margin-top:3px;line-height:1.6">{{ r.hint }}</span></span>
+                          <span style="{{ r.valStyle }}">{{ r.value }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-for>
+                  <div>
+                    <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);padding-bottom:8px;border-bottom:1px solid var(--line)">System states · prototype</div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
+                      <sc-for list="{{ sys.tabs }}" as="t" hint-placeholder-count="5"><button onClick="{{ t.go }}" style="{{ t.style }}">{{ t.label }}</button></sc-for>
+                    </div>
+                    <div style="margin-top:18px;border:1px solid var(--line);border-radius:var(--r-3);padding:26px;background:var(--bg-1)">
+                      <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:{{ sys.tone }}">{{ sys.kicker }}</div>
+                      <div style="font-family:var(--f-disp);font-size:26px;font-weight:300;margin-top:10px;text-wrap:pretty">{{ sys.title }}</div>
+                      <div style="font-family:var(--f-mono);font-size:11px;color:var(--txt-3);margin-top:12px;line-height:1.9;white-space:pre-line">{{ sys.body }}</div>
+                      <sc-if value="{{ sys.hasBar }}" hint-placeholder-val="{{ false }}">
+                        <div style="margin-top:18px;height:4px;background:var(--bg-3);border-radius:99px;overflow:hidden"><div style="{{ sys.bar }}"></div></div>
+                      </sc-if>
+                      <div style="display:flex;gap:8px;margin-top:20px"><span style="{{ sys.actionStyle }}">{{ sys.action }}</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+          </div>
+
+          <sc-if value="{{ is.desktop }}" hint-placeholder-val="{{ true }}">
+            <div style="flex:0 0 78px;height:78px;border-top:1px solid var(--line);background:var(--bg-1);display:grid;grid-template-columns:minmax(190px,1fr) minmax(210px,620px) minmax(150px,1fr);align-items:center;gap:20px;padding:0 18px;overflow:hidden">
+              <button onClick="{{ np.expand }}" style="display:flex;align-items:center;gap:12px;min-width:0;overflow:hidden" aria-label="Expand now playing">
+                <span style="{{ np.thumb56 }}"></span>
+                <span style="min-width:0;flex:1">
+                  <span style="display:block;font-family:var(--f-disp);font-size:15px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ np.title }}</span>
+                  <span style="display:block;font-size:11.5px;color:var(--txt-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ np.artist }}</span>
+                </span>
+              </button>
+              <div style="min-width:0;display:flex;flex-direction:column;align-items:center;gap:7px">
+                <div style="display:flex;align-items:center;gap:18px;flex-wrap:nowrap">
+                  <button onClick="{{ np.prev }}" aria-label="Previous track" style="display:flex;align-items:center;color:var(--txt-2)"><span style="width:0;height:0;border-right:8px solid currentColor;border-top:5px solid transparent;border-bottom:5px solid transparent"></span><span style="width:2px;height:10px;background:currentColor"></span></button>
+                  <button onClick="{{ np.toggle }}" aria-label="{{ np.playLabel }}" style="width:40px;height:40px;border-radius:50%;background:var(--txt-1);color:var(--bg-0);display:grid;place-items:center">
+                    <span style="{{ np.playGlyph }}"></span>
+                  </button>
+                  <button onClick="{{ np.next }}" aria-label="Next track" style="display:flex;align-items:center;color:var(--txt-2)"><span style="width:2px;height:10px;background:currentColor"></span><span style="width:0;height:0;border-left:8px solid currentColor;border-top:5px solid transparent;border-bottom:5px solid transparent"></span></button>
+                  <span style="{{ np.modeStyle }}">SHUF</span>
+                  <span style="{{ np.modeStyle }}">RPT</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;width:100%;max-width:620px">
+                  <span style="font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);font-variant-numeric:tabular-nums">{{ np.time }}</span>
+                  <div onClick="{{ np.scrub }}" role="slider" tabIndex="{{ zero }}" aria-label="Seek" style="flex:1;height:16px;display:flex;align-items:center;cursor:pointer">
+                    <div style="height:3px;width:100%;background:var(--bg-3);border-radius:99px;overflow:hidden"><div style="{{ np.barStyle }}"></div></div>
+                  </div>
+                  <span style="font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);font-variant-numeric:tabular-nums">{{ np.dur }}</span>
+                </div>
+              </div>
+              <div style="min-width:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-family:var(--f-mono);font-size:10px;color:var(--txt-3);text-align:right;overflow:hidden">
+                <div style="color:var(--txt-2);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sig.chain }}</div>
+                <div style="max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sig.out }}</div>
+                <div style="display:flex;gap:10px;margin-top:2px;flex:0 0 auto;white-space:nowrap;max-width:100%;min-width:0;overflow:hidden;justify-content:flex-end">
+                  <button onClick="{{ goQueue }}" style="color:var(--txt-3);letter-spacing:.1em" style-hover="color:var(--txt-1)">QUEUE {{ qv.n }}</button>
+                  <button onClick="{{ np.lyricsToggle }}" style="{{ np.lyrBtn }}">LYRICS</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ is.mobile }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <button onClick="{{ np.expand }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border-top:1px solid var(--line);background:var(--bg-1)">
+                <span style="{{ np.thumb44 }}"></span>
+                <span style="flex:1;min-width:0">
+                  <span style="display:block;font-family:var(--f-disp);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ np.title }}</span>
+                  <span style="display:block;font-size:11px;color:var(--txt-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ np.artist }}</span>
+                </span>
+                <span onClick="{{ np.toggleStop }}" style="width:44px;height:44px;display:grid;place-items:center;color:var(--txt-1)"><span style="{{ np.playGlyph }}"></span></span>
+              </button>
+              <div style="height:2px;background:var(--bg-3)"><div style="{{ np.barStyle }}"></div></div>
+              <nav style="display:flex;background:var(--bg-1);padding:6px 4px 22px;border-top:1px solid var(--line-soft)" aria-label="Sections">
+                <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+                  <button onClick="{{ t.go }}" style="{{ t.style }}">
+                    <span style="font-family:var(--f-mono);font-size:10px;letter-spacing:.06em">{{ t.code }}</span>
+                    <span style="font-size:10px">{{ t.label }}</span>
+                  </button>
+                </sc-for>
+              </nav>
+            </div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ qv.open }}" hint-placeholder-val="{{ false }}">
+          <aside style="{{ qv.panel }}" aria-label="Queue">
+            <div style="display:flex;align-items:flex-start;gap:12px;padding:16px 18px 14px;border-bottom:1px solid var(--line)">
+              <div style="flex:1;min-width:0">
+                <div style="font-family:var(--f-disp);font-size:20px;font-weight:400;line-height:1.1">Queue</div>
+                <div style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3);margin-top:5px;line-height:1.6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ qv.from }}</div>
+              </div>
+              <button onClick="{{ qv.close }}" aria-label="Close queue" style="width:32px;height:32px;flex:0 0 32px;display:grid;place-items:center;border:1px solid var(--line);border-radius:var(--r-1);font-family:var(--f-mono);font-size:12px;color:var(--txt-3)">×</button>
+            </div>
+            <div style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:14px 18px 20px">
+              <div style="font-family:var(--f-mono);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3)">History</div>
+              <sc-for list="{{ qv.history }}" as="t" hint-placeholder-count="2">
+                <div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line-soft);opacity:.5">
+                  <span style="{{ t.thumb36 }}"></span>
+                  <span style="flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.title }}</span>
+                  <span style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3)">{{ t.dur }}</span>
+                </div>
+              </sc-for>
+              <div style="{{ qv.nowStyle }}">
+                <span style="{{ qv.now.thumb36 }}"></span>
+                <span style="flex:1;min-width:0"><span style="display:block;font-family:var(--f-disp);font-size:15px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ qv.now.title }}</span><span style="display:block;font-family:var(--f-mono);font-size:9.5px;color:var(--txt-3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ qv.now.sub }}</span></span>
+                <span style="font-family:var(--f-mono);font-size:10px;flex:0 0 auto">{{ qv.now.dur }}</span>
+              </div>
+              <div style="font-family:var(--f-mono);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3);margin-top:20px">Up next · {{ qv.n }}</div>
+              <sc-for list="{{ qv.up }}" as="t" hint-placeholder-count="6">
+                <div style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line-soft)">
+                  <span style="font-family:var(--f-mono);font-size:9.5px;color:var(--txt-3);width:18px;flex:0 0 18px;font-variant-numeric:tabular-nums">{{ t.i }}</span>
+                  <span style="{{ t.thumb36 }}"></span>
+                  <span style="flex:1;min-width:0"><span style="display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.title }}</span><span style="display:block;font-size:10.5px;color:var(--txt-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.artist }}</span></span>
+                  <span style="display:flex;gap:2px;flex:0 0 auto">
+                    <button onClick="{{ t.up }}" aria-label="Move up" style="width:28px;height:28px;border:1px solid var(--line);border-radius:var(--r-1);display:grid;place-items:center;font-family:var(--f-mono);font-size:10px;color:var(--txt-2)">↑</button>
+                    <button onClick="{{ t.down }}" aria-label="Move down" style="width:28px;height:28px;border:1px solid var(--line);border-radius:var(--r-1);display:grid;place-items:center;font-family:var(--f-mono);font-size:10px;color:var(--txt-2)">↓</button>
+                    <button onClick="{{ t.remove }}" aria-label="Remove" style="width:28px;height:28px;border:1px solid var(--line);border-radius:var(--r-1);display:grid;place-items:center;font-family:var(--f-mono);font-size:10px;color:var(--txt-3)">×</button>
+                  </span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ qv.isEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);line-height:1.9;margin-top:16px;padding:14px;border:1px dashed var(--line);border-radius:var(--r-2)">Nothing queued.<br />Play a record and it fills from the album, in order.</div>
+              </sc-if>
+            </div>
+            <div style="flex:0 0 auto;padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px">
+              <button onClick="{{ qv.save }}" style="flex:1;min-height:40px;border:1px solid var(--line);border-radius:var(--r-2);font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt-2);text-align:center">Save as playlist</button>
+              <button onClick="{{ qv.clear }}" style="min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:var(--r-2);font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt-3)">Clear</button>
+            </div>
+          </aside>
+        </sc-if>
+
+        <sc-if value="{{ np.open }}" hint-placeholder-val="{{ false }}">
+          <div style="{{ np.sheet }}">
+            <div style="{{ np.sheetWash }}"></div>
+            <div style="position:relative;flex:1;min-height:0;display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;gap:12px;padding:16px 20px">
+                <button onClick="{{ np.collapse }}" aria-label="Collapse player" style="font-family:var(--f-mono);font-size:11px;color:var(--txt-2);letter-spacing:.1em">▾ CLOSE</button>
+                <span style="flex:1;text-align:center;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--txt-3)">{{ np.context }}</span>
+                <button onClick="{{ np.lyricsToggle }}" style="{{ np.lyrBtn }}">LYRICS</button>
+              </div>
+              <sc-if value="{{ np.showArt }}" hint-placeholder-val="{{ true }}">
+                <div style="{{ np.body }}">
+                  <div style="{{ np.artWrap }}"><div style="{{ np.glow }}"></div><div style="{{ np.art }}"></div></div>
+                  <div style="{{ np.info }}">
+                    <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--txt-3)">Now playing</div>
+                    <div style="{{ np.bigTitle }}">{{ np.title }}</div>
+                    <div style="font-family:var(--f-disp);font-size:20px;color:var(--txt-2);margin-top:6px">{{ np.artist }}</div>
+                    <div style="font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);margin-top:8px">{{ np.albumLine }}</div>
+                    <div style="display:flex;align-items:center;gap:10px;width:100%;margin-top:26px">
+                      <span style="font-family:var(--f-mono);font-size:11px;color:var(--txt-2);font-variant-numeric:tabular-nums">{{ np.time }}</span>
+                      <div onClick="{{ np.scrub }}" role="slider" tabIndex="{{ zero }}" aria-label="Seek" style="flex:1;height:20px;display:flex;align-items:center;cursor:pointer"><div style="height:4px;width:100%;background:var(--bg-3);border-radius:99px;overflow:hidden"><div style="{{ np.barStyle }}"></div></div></div>
+                      <span style="font-family:var(--f-mono);font-size:11px;color:var(--txt-3);font-variant-numeric:tabular-nums">{{ np.dur }}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:26px;margin-top:22px">
+                      <button onClick="{{ np.prev }}" aria-label="Previous track" style="min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;color:var(--txt-2)"><span style="width:0;height:0;border-right:11px solid currentColor;border-top:7px solid transparent;border-bottom:7px solid transparent"></span><span style="width:2px;height:14px;background:currentColor"></span></button>
+                      <button onClick="{{ np.toggle }}" aria-label="{{ np.playLabel }}" style="width:56px;height:56px;border-radius:50%;background:var(--txt-1);color:var(--bg-0);display:grid;place-items:center"><span style="{{ np.playGlyphBig }}"></span></button>
+                      <button onClick="{{ np.next }}" aria-label="Next track" style="min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;color:var(--txt-2)"><span style="width:2px;height:14px;background:currentColor"></span><span style="width:0;height:0;border-left:11px solid currentColor;border-top:7px solid transparent;border-bottom:7px solid transparent"></span></button>
+                    </div>
+                    <div style="margin-top:28px;padding-top:16px;border-top:1px solid var(--line-soft);font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);line-height:1.9;width:100%">
+                      <div style="color:var(--txt-2)">{{ sig.chain }}</div>
+                      <div>{{ sig.out }}</div>
+                      <div style="margin-top:10px;display:flex;justify-content:space-between"><span>NEXT</span><span style="color:var(--txt-2);max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ np.nextTitle }}</span></div>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ np.showLyrics }}" hint-placeholder-val="{{ false }}">
+                <div style="{{ np.lyrWrap }}">
+                  <sc-if value="{{ lyr.synced }}" hint-placeholder-val="{{ true }}">
+                    <div style="width:100%;max-width:760px;flex:0 0 auto">
+                      <sc-for list="{{ lyr.lines }}" as="l" hint-placeholder-count="8">
+                        <button onClick="{{ l.seek }}" style="{{ l.style }}">{{ l.text }}</button>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ lyr.plain }}" hint-placeholder-val="{{ false }}">
+                    <div style="width:100%;max-width:620px;flex:0 0 auto">
+                      <div style="font-family:var(--f-mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--txt-3);margin-bottom:20px">Unsynced · plain text from lrclib</div>
+                      <sc-for list="{{ lyr.lines }}" as="l" hint-placeholder-count="8">
+                        <div style="font-family:var(--f-disp);font-size:22px;line-height:1.75;color:var(--txt-2)">{{ l.text }}</div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ lyr.none }}" hint-placeholder-val="{{ false }}">
+                    <div style="width:100%;max-width:520px;flex:0 0 auto">
+                      <div style="font-family:var(--f-disp);font-size:30px;font-weight:300;line-height:1.3">No lyrics for this track.</div>
+                      <div style="font-family:var(--f-mono);font-size:10.5px;color:var(--txt-3);margin-top:16px;line-height:1.9">lrclib returned no match for<br />{{ np.title }} · {{ np.artist }}<br /><br />Instrumental, or nobody has transcribed it. Either is fine.</div>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ cmd.open }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ cmd.close }}" style="position:fixed;inset:0;background:oklch(0.14 0.01 268/.72);display:flex;justify-content:center;padding-top:12vh;z-index:60">
+      <div onClick="{{ cmd.stop }}" style="width:min(620px,92vw);max-height:66vh;background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r-3);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 90px oklch(0.1 0.01 268/.6);animation:nyxrise var(--dur-mid) var(--ease)">
+        <div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line-soft)">
+          <span style="font-family:var(--f-mono);font-size:11px;color:var(--txt-3)">⌘K</span>
+          <input value="{{ cmd.q }}" onChange="{{ cmd.onInput }}" autoFocus="{{ true }}" placeholder="Go to, play, or run…" aria-label="Command palette" style="flex:1;background:none;border:0;outline:none;font-size:16px" />
+        </div>
+        <div style="overflow-y:auto;padding:8px">
+          <sc-for list="{{ cmd.items }}" as="c" hint-placeholder-count="8">
+            <button onClick="{{ c.run }}" style="display:flex;gap:12px;align-items:center;width:100%;padding:10px 12px;border-radius:var(--r-2)" style-hover="background:var(--bg-2)">
+              <span style="font-family:var(--f-mono);font-size:9px;letter-spacing:.14em;color:var(--txt-3);width:52px;flex:0 0 52px;text-transform:uppercase">{{ c.kind }}</span>
+              <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.label }}</span>
+              <span style="font-family:var(--f-mono);font-size:10px;color:var(--txt-3)">{{ c.hint }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ keys.open }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ keys.close }}" style="position:fixed;inset:0;background:oklch(0.14 0.01 268/.78);display:grid;place-items:center;z-index:60;padding:24px">
+      <div style="width:min(760px,94vw);background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r-3);padding:28px">
+        <div style="font-family:var(--f-disp);font-size:26px;font-weight:300">Keyboard</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0 34px;margin-top:20px">
+          <sc-for list="{{ keys.rows }}" as="k" hint-placeholder-count="12">
+            <div style="display:flex;gap:14px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line-soft)">
+              <span style="font-family:var(--f-mono);font-size:10.5px;color:var(--txt-1);border:1px solid var(--line);border-radius:var(--r-1);padding:2px 6px;min-width:52px;text-align:center">{{ k.key }}</span>
+              <span style="font-size:12.5px;color:var(--txt-2)">{{ k.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ amb.open }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:70;background:var(--bg-0);overflow:hidden">
+      <div style="{{ amb.wash }}"></div>
+      <div style="{{ amb.stage }}">
+        <div style="{{ amb.artWrap }}"><div style="{{ amb.glow }}"></div><div style="{{ amb.art }}"></div></div>
+        <div style="{{ amb.textCol }}">
+          <div style="font-family:var(--f-mono);font-size:13px;letter-spacing:.22em;color:var(--txt-3)">{{ amb.clock }}</div>
+          <div style="{{ amb.title }}">{{ np.title }}</div>
+          <div style="font-family:var(--f-disp);font-size:34px;color:var(--txt-2);margin-top:10px">{{ np.artist }}</div>
+          <div style="display:flex;gap:4px;align-items:flex-end;height:52px;margin-top:34px">
+            <sc-for list="{{ amb.meters }}" as="m" hint-placeholder-count="24"><div style="{{ m.style }}"></div></sc-for>
+          </div>
+          <div style="font-family:var(--f-mono);font-size:15px;color:var(--txt-3);margin-top:30px;line-height:2">{{ sig.chain }}<br />NEXT · {{ amb.next }}</div>
+        </div>
+      </div>
+      <div style="position:absolute;bottom:20px;left:0;right:0;display:flex;justify-content:center;gap:8px">
+        <button onClick="{{ amb.toggleBurn }}" style="{{ amb.burnStyle }}">{{ amb.burnLabel }}</button>
+        <button onClick="{{ amb.close }}" style="padding:9px 16px;border:1px solid var(--line);border-radius:var(--r-2);font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;color:var(--txt-3)">EXIT</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;paletteStrength&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:70,&quot;min&quot;:0,&quot;max&quot;:100,&quot;step&quot;:5,&quot;unit&quot;:&quot;%&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Palette&quot;},&quot;showSignalPath&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Chrome&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.build();
+    this.state = {
+      screen: 'home', albumId: this.lib[0].id, artistName: 'Miles Davis',
+      playing: false, t: 0, queue: [], qi: 0,
+      theme: 'dark', vp: 'desktop', np: false, lyr: false,
+      cmd: false, cmdQ: '', keys: false, ambient: false, burn: false,
+      sortBy: 'added', dense: 'comfortable', big: false, back: false,
+      range: 'year', crateI: 0, dug: 0, played: 0, crateEnd: false,
+      q: '', ask: false, sys: 'unreachable', clock: this.clockStr(), qOpen: false
+    };
+  }
+
+  /* ---------- data ---------- */
+  build() {
+    const R = (title, artist, year, genre, plays, fmt, n, last, hue, chroma, cv, special) =>
+      ({ title, artist, year, genre, plays, fmt, n, last, hue, chroma, cv, special });
+    const RAW = [
+      R('Kind of Blue','Miles Davis',1959,'Jazz',214,'16/44.1',5,'2026-08-19',248,.05,'bands'),
+      R('Sketches of Spain','Miles Davis',1960,'Jazz',63,'24/96',5,'2026-05-02',34,.09,'split'),
+      R('In a Silent Way','Miles Davis',1969,'Jazz',88,'16/44.1',2,'2026-07-30',196,.04,'grain'),
+      R('The Köln Concert','Keith Jarrett',1975,'Jazz',131,'24/96',4,'2026-08-21',82,.03,'mono'),
+      R('Blue Train','John Coltrane',1957,'Jazz',97,'16/44.1',5,'2026-06-11',255,.11,'bands'),
+      R('A Love Supreme','John Coltrane',1965,'Jazz',158,'24/96',4,'2026-08-11',38,.10,'conc'),
+      R('Journey in Satchidananda','Alice Coltrane',1971,'Jazz',72,'16/44.1',5,'2026-07-04',62,.12,'conc'),
+      R('Karma','Pharoah Sanders',1969,'Jazz',41,'16/44.1',2,'2025-11-18',124,.13,'grain'),
+      R('Money Jungle','Duke Ellington',1962,'Jazz',12,'16/44.1',7,'2025-04-02',280,.03,'type'),
+      R('Raga Yaman: Alap, Jod, Jhala — Vilambit Teentaal','Nikhil Banerjee',1974,'Hindustani',54,'16/44.1',4,'2026-08-02',66,.09,'bands','hindustani'),
+      R('Ragas Marwa & Sohini','Ravi Shankar',1968,'Hindustani',37,'16/44.1',3,'2026-03-22',44,.10,'conc','hindustani'),
+      R('Call of the Valley','Shivkumar Sharma · Hariprasad Chaurasia · Brij Bhushan Kabra',1967,'Hindustani',66,'16/44.1',9,'2026-06-27',150,.07,'grain'),
+      R('Sarangi: The Voice of a Hundred Colours','Ram Narayan',1979,'Hindustani',9,'16/44.1',3,'2024-09-14',88,.05,'mono','hindustani'),
+      R('Dhrupad','Ustad Zia Mohiuddin Dagar',1982,'Hindustani',4,'24/96',2,'2024-03-08',214,.02,'mono','hindustani'),
+      R('Symphony No. 3, Op. 36 “Symphony of Sorrowful Songs”','Henryk Górecki · London Sinfonietta',1992,'Classical',48,'24/96',3,'2026-08-14',268,.04,'split','classical3'),
+      R('The Goldberg Variations (1981)','Glenn Gould',1981,'Classical',122,'24/96',32,'2026-08-20',92,.02,'mono'),
+      R('Tabula Rasa','Arvo Pärt · Gidon Kremer',1984,'Classical',77,'24/192',4,'2026-08-09',232,.03,'bands'),
+      R('String Quartets Nos. 7 & 8','Dmitri Shostakovich · Borodin Quartet',1978,'Classical',31,'16/44.1',9,'2026-01-30',18,.08,'split'),
+      R('Symphony No. 9 in D minor, Op. 125 “Choral”','Wiener Philharmoniker · Karl Böhm',1970,'Classical',26,'16/44.1',4,'2025-12-24',52,.06,'type'),
+      R('Selected Ambient Works 85–92','Aphex Twin',1992,'Electronic',167,'16/44.1',13,'2026-08-18',188,.09,'grain'),
+      R('Untrue','Burial',2007,'Electronic',143,'16/44.1',13,'2026-08-16',272,.07,'grain'),
+      R('Endtroducing.....','DJ Shadow',1996,'Electronic',85,'16/44.1',13,'2026-05-19',28,.06,'split'),
+      R('Music Has the Right to Children','Boards of Canada',1998,'Electronic',119,'16/44.1',17,'2026-08-12',104,.08,'bands'),
+      R('Amber','Autechre',1994,'Electronic',44,'16/44.1',11,'2026-02-14',236,.05,'conc'),
+      R('Neon Abattoir','Rave Cadaver',2019,'Electronic',7,'16/44.1',9,'2025-06-30',12,.30,'garish'),
+      R('Mezzanine','Massive Attack',1998,'Electronic',102,'16/44.1',11,'2026-07-19',252,.05,'grain'),
+      R('Dummy','Portishead',1994,'Electronic',137,'16/44.1',11,'2026-08-06',210,.04,'mono'),
+      R('Spirit of Eden','Talk Talk',1988,'Rock',188,'24/96',6,'2026-08-22',142,.06,'bands'),
+      R('Laughing Stock','Talk Talk',1991,'Rock',164,'24/96',6,'2026-08-13',168,.05,'grain'),
+      R('The Colour of Spring','Talk Talk',1986,'Rock',59,'16/44.1',8,'2026-04-08',118,.09,'split'),
+      R('Kid A','Radiohead',2000,'Rock',151,'16/44.1',10,'2026-08-07',218,.07,'bands'),
+      R('Blue','Joni Mitchell',1971,'Rock',96,'24/96',10,'2026-07-11',228,.06,'type'),
+      R('Pink Moon','Nick Drake',1972,'Rock',73,'16/44.1',11,'2026-06-02',300,.05,'mono'),
+      R('Harbour Lights','Kite Season',2021,'Rock',400,'24/96',9,'2026-08-27',196,.10,'bands','lyrics'),
+      R('Zombie','Fela Kuti & Africa 70',1976,'World',68,'16/44.1',4,'2026-07-25',72,.13,'split'),
+      R('Talking Timbuktu','Ali Farka Touré & Ry Cooder',1994,'World',52,'16/44.1',10,'2026-05-27',58,.09,'grain'),
+      R('Miss Perfumado','Cesária Évora',1992,'World',81,'16/44.1',12,'2026-08-04',204,.07,'conc'),
+      R('Amália em Paris','Amália Rodrigues',1957,'World',23,'16/44.1',12,'2025-10-09',354,.06,'type'),
+      R('Nigeria Soul Fever: Afro Funk, Disco and Boogie — Lagos and Beyond, 1974–1983','Various Artists',2016,'World',34,'16/44.1',40,'2026-03-15',96,.12,'bands','va40'),
+      R('The Disintegration Loops I–IV: Complete Recordings of the Original Tape Transfers, 2001','William Basinski',2002,'Ambient',29,'24/96',4,'2026-06-18',86,.01,'mono'),
+      R('Fourth World Vol. 1: Possible Musics','Jon Hassell & Brian Eno',1980,'Ambient',64,'16/44.1',6,'2026-07-08',48,.08,'grain'),
+      R('Untitled (Field Recordings, Vol. 3)','Unknown Artist',2023,'Ambient',0,'24/192',6,null,58,.02,'none'),
+      R('Ambient 1: Music for Airports','Brian Eno',1978,'Ambient',176,'16/44.1',4,'2026-08-25',222,.03,'bands'),
+      R('Apollo: Atmospheres and Soundtracks','Brian Eno',1983,'Ambient',108,'24/96',12,'2026-08-15',258,.04,'grain'),
+      R('Ambient 2: The Plateaux of Mirror','Harold Budd & Brian Eno',1980,'Ambient',94,'16/44.1',10,'2026-08-01',158,.03,'mono'),
+      R('Another Green World','Brian Eno',1975,'Ambient',132,'16/44.1',14,'2026-08-10',132,.09,'split'),
+      R('Discreet Music','Brian Eno',1975,'Ambient',57,'16/44.1',4,'2026-06-21',176,.03,'conc'),
+      R('Before and After Science','Brian Eno',1977,'Ambient',46,'16/44.1',10,'2026-05-14',20,.07,'type'),
+      R('Here Come the Warm Jets','Brian Eno',1974,'Rock',38,'16/44.1',10,'2026-04-19',6,.12,'bands'),
+      R('Taking Tiger Mountain (By Strategy)','Brian Eno',1974,'Rock',21,'16/44.1',11,'2025-09-27',110,.10,'split'),
+      R('Music for Films','Brian Eno',1978,'Ambient',33,'16/44.1',18,'2026-02-02',290,.04,'grain'),
+      R('On Land','Brian Eno',1982,'Ambient',71,'16/44.1',8,'2026-07-16',102,.05,'grain'),
+      R('Thursday Afternoon','Brian Eno',1985,'Ambient',18,'24/96',1,'2025-08-30',180,.02,'mono'),
+      R('The Ship','Brian Eno',2016,'Ambient',14,'24/96',4,'2025-07-12',240,.06,'conc'),
+      R('Reflection','Brian Eno',2017,'Ambient',26,'24/96',1,'2026-01-11',262,.03,'bands'),
+      R('Small Craft on a Milk Sea','Brian Eno',2010,'Ambient',11,'16/44.1',15,'2025-05-23',146,.05,'split')
+    ];
+    const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 42);
+    this.lib = RAW.map((a, i) => ({ ...a, id: slug(a.title) + '-' + i, added: 900 - i * 13 }));
+    this._tc = {};
+    this.buried = {};
+    this.lyricLines = [
+      [7.5, 'The harbour lights come on in threes'], [13.2, 'and the water takes them badly'],
+      [19.4, 'You said the tide would wait for us'], [25.9, 'It did not, and I forgive it'],
+      [33.0, 'Cold on the pier, still counting'], [39.6, 'one for the boat that left'],
+      [45.8, 'one for the boat that stayed'], [52.4, 'one for whoever is watching'],
+      [60.0, 'and we go under the sodium glow'], [67.2, 'the way anything goes home'],
+      [74.5, 'slowly, and against the weather'], [82.0, 'slowly, and without a sound'],
+      [92.0, 'The harbour lights come on in threes'], [98.5, 'I have stopped keeping score']
+    ];
+    this.plainLyrics = ['Every window is a small yellow country', 'and I am nobody\'s citizen tonight.', '',
+      'Take the long road out past the reservoir.', 'Leave the radio on for the dog.', '',
+      'By morning the frost will have written', 'something kinder on the glass.'];
+  }
+
+  rng(seed) { let h = 2166136261; for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); } return () => { h += 0x6D2B79F5; let t = h; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  ms(s) { const m = Math.floor(s / 60), r = Math.floor(s % 60); return m + ':' + String(r).padStart(2, '0'); }
+  hms(s) { const h = Math.floor(s / 3600), m = Math.round(s % 3600 / 60); return h ? h + ' h ' + m + ' min' : m + ' min'; }
+  fmtLong(f) { const [b, k] = f.split('/'); return 'FLAC · ' + b + ' bit · ' + k + ' kHz'; }
+  clockStr() { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+  ago(last) { if (!last) return 'never'; const d = Math.round((new Date('2026-08-28') - new Date(last)) / 86400000); if (d < 1) return 'today'; if (d < 31) return d + ' d'; if (d < 365) return Math.round(d / 30) + ' mo'; return (d / 365).toFixed(1) + ' y'; }
+  dateStr(last) { if (!last) return 'never played'; const d = new Date(last); return d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear(); }
+
+  tracks(a) {
+    if (this._tc[a.id]) return this._tc[a.id];
+    const rnd = this.rng(a.id); let out = [];
+    const mk = (title, dur, artist) => ({ title, dur, artist: artist || a.artist });
+    if (a.special === 'classical3') {
+      out = [mk('I. Lento — Sostenuto tranquillo ma cantabile', 1622), mk('II. Lento e largo — Tranquillissimo', 1327), mk('III. Lento — Cantabile semplice', 1103)];
+    } else if (a.special === 'hindustani') {
+      const parts = ['Alap', 'Jod', 'Jhala', 'Vilambit Teentaal', 'Drut Teentaal', 'Gat in Ektaal'];
+      out = parts.slice(0, a.n).map((p, i) => mk(a.title.split(':')[0] + ': ' + p, 620 + Math.floor(rnd() * 1180)));
+    } else if (a.special === 'va40') {
+      const A = ['Lagos', 'Sunshine', 'Motherland', 'Money', 'Disco', 'Highlife', 'Ijo', 'Boogie', 'Sweet', 'Kalakuta', 'Electric', 'Afro', 'Midnight', 'Palm Wine'];
+      const B = ['Fever', 'People', 'Rhythm', 'Special', 'Dance', 'Woman', 'Groove', 'Feeling', 'Machine', 'Time'];
+      const AR = ['Tunde Mabadu', 'Christy Essien', 'Oby Onyioha', 'Amas', 'Doris Ebong', 'Livy Ekemezie', 'Steve Monite', 'Bongos Ikwue', 'Jake Sollo', 'Mona Finnih'];
+      for (let i = 0; i < 40; i++) out.push(mk(A[i % A.length] + ' ' + B[(i * 3) % B.length], 220 + Math.floor(rnd() * 260), AR[(i * 7) % AR.length]));
+    } else {
+      const pools = {
+        Jazz: ['Nocturne for Two', 'Slow Drag', 'Blue Hours', 'Late Set', 'Ascendant', 'Salt Air', 'Gone by Noon', 'The Long Way Round', 'Ballad for a Closed Room', 'Third Take', 'Cold Brass', 'Evening Standard', 'Reprise at Dawn'],
+        Rock: ['Harbour Lights', 'Ten Feet Under', 'Winter Coats', 'The Quiet Part', 'Radio Silence', 'Bruise Blue', 'Something Like Weather', 'Housefire', 'Low Country', 'Signal Fires', 'Every Window', 'Undertow', 'Small Hours', 'Hold Still', 'The Reservoir', 'Nightjar', 'Frost'],
+        Electronic: ['Coldwave', 'Signal Decay', 'Verdigris', 'Nightbus', 'Halcyon Drift', 'Static Bloom', 'Pale Machine', 'Sub Rosa', 'Iron Filings', 'Wet Concrete', 'Ghost Vinyl', 'Low Orbit', 'Blue Screen', 'Fen', 'Tessellate', 'Cassette Rot', 'Aftertone'],
+        Ambient: ['First Light', 'Slow Room', 'Tide Table', 'Long Shadow', 'Snowline', 'Interior', 'Vespers', 'Drift', 'Meltwater', 'Held Note', 'Distant Rain', 'Chapel', 'Fieldwork', 'Standing Water', 'Nightwatch', 'Aubade', 'Fathom', 'Terminal'],
+        Classical: ['I. Allegro moderato', 'II. Andante sostenuto', 'III. Scherzo: Vivace', 'IV. Finale: Presto', 'Prelude', 'Aria', 'Variatio 1 a 1 Clav.', 'Variatio 2 a 1 Clav.', 'Fratres', 'Cantus in Memoriam', 'Adagio', 'Largo'],
+        Hindustani: ['Alap', 'Jod', 'Jhala', 'Vilambit Teentaal', 'Drut Teentaal', 'Bhajan', 'Dhun', 'Tarana', 'Gat'],
+        World: ['Sodade', 'Angola', 'Petit Pays', 'Mar Azul', 'Amanhecer', 'Fado do Mar', 'Diaraby', 'Gomni', 'Keito', 'Lament', 'Sundown', 'Coming Home']
+      };
+      const pool = pools[a.genre] || pools.Ambient;
+      const shuf = pool.slice(); for (let i = shuf.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1));[shuf[i], shuf[j]] = [shuf[j], shuf[i]]; }
+      for (let i = 0; i < a.n; i++) {
+        const base = shuf[i % shuf.length] + (i >= shuf.length ? ' (alt. take)' : '');
+        const long = a.genre === 'Ambient' || a.genre === 'Classical';
+        out.push(mk(base, long ? 300 + Math.floor(rnd() * 900) : 150 + Math.floor(rnd() * 330)));
+      }
+    }
+    const res = out.map((t, i) => ({ ...t, no: i + 1, fmt: a.fmt, plays: Math.round(a.plays / a.n * (0.4 + rnd() * 1.4)), albumId: a.id }));
+    this._tc[a.id] = res; return res;
+  }
+
+  album(id) { return this.lib.find(a => a.id === id) || this.lib[0]; }
+  cover(a) {
+    const st = (this.props.paletteStrength ?? 70) / 70;
+    const h = a.hue, c = Math.min(a.chroma * st, .33), L = (l, cc, hh) => 'oklch(' + l + ' ' + cc.toFixed(3) + ' ' + ((hh % 360 + 360) % 360) + ')';
+    switch (a.cv) {
+      case 'bands': return 'linear-gradient(' + (150 + h % 40) + 'deg,' + L(.72, c, h) + ' 0 34%,' + L(.24, c * .7, h + 22) + ' 34% 58%,' + L(.88, c * .35, h - 18) + ' 58% 100%)';
+      case 'split': return 'linear-gradient(90deg,' + L(.30, c * .8, h) + ' 0 46%,' + L(.80, c, h + 30) + ' 46% 100%)';
+      case 'conc': return 'radial-gradient(circle at 50% 44%,' + L(.88, c * .5, h) + ' 0 13%,' + L(.26, c, h) + ' 13% 30%,' + L(.70, c * .85, h + 18) + ' 30% 47%,' + L(.19, c * .5, h) + ' 47% 100%)';
+      case 'grain': return 'radial-gradient(80% 60% at 24% 18%,' + L(.64, c, h) + ' 0%,transparent 62%),radial-gradient(72% 72% at 80% 82%,' + L(.42, c * .9, h + 44) + ' 0%,transparent 66%),' + L(.17, .012, h);
+      case 'type': return L(.21, c * .4, h);
+      case 'mono': return 'linear-gradient(200deg,oklch(.84 .004 ' + h + ') 0 30%,oklch(.32 .006 ' + h + ') 30% 64%,oklch(.62 .004 ' + h + ') 64% 100%)';
+      case 'garish': return 'conic-gradient(from ' + h + 'deg,oklch(.75 .3 20),oklch(.86 .28 95),oklch(.72 .3 150),oklch(.68 .32 300),oklch(.75 .3 20))';
+      default: return 'repeating-linear-gradient(135deg,var(--bg-2) 0 6px,var(--bg-1) 6px 12px)';
+    }
+  }
+  pal(a) {
+    const light = this.state.theme === 'light';
+    const st = (this.props.paletteStrength ?? 70) / 100;
+    const c = Math.min(a.chroma * st, .09), cb = Math.min(a.chroma * st, .13), h = (a.hue % 360 + 360) % 360;
+    return {
+      wash: light ? 'oklch(0.90 ' + Math.min(c, .055).toFixed(3) + ' ' + h + ')' : 'oklch(0.30 ' + c.toFixed(3) + ' ' + h + ')',
+      deep: light ? 'oklch(0.955 ' + Math.min(c, .03).toFixed(3) + ' ' + h + ')' : 'oklch(0.185 ' + Math.min(c, .05).toFixed(3) + ' ' + h + ')',
+      glow: light ? 'oklch(0.82 ' + cb.toFixed(3) + ' ' + h + ')' : 'oklch(0.46 ' + cb.toFixed(3) + ' ' + h + ')',
+      bar: light ? 'oklch(0.52 ' + cb.toFixed(3) + ' ' + h + ')' : 'oklch(0.76 ' + cb.toFixed(3) + ' ' + h + ')',
+      lyric: light ? 'oklch(0.36 ' + Math.min(c, .07).toFixed(3) + ' ' + h + ')' : 'oklch(0.92 ' + Math.min(c, .06).toFixed(3) + ' ' + h + ')'
+    };
+  }
+
+  /* ---------- lifecycle ---------- */
+  ensureClock() {
+    if (this.timer) return;
+    let last = Date.now();
+    this.timer = setInterval(() => {
+      const now = Date.now(), dt = Math.min((now - last) / 1000, 2); last = now;
+      if (this.state.playing) {
+        const cur = this.current(); const dur = cur ? cur.dur : 300;
+        const t = this.state.t + dt;
+        if (t >= dur) this.next(); else this.setState({ t });
+      }
+      if (this.state.clock !== this.clockStr()) this.setState({ clock: this.clockStr() });
+    }, 250);
+  }
+
+  ensureKeys() {
+    if (this.onKey) return;
+    this.onKey = e => {
+      const tag = (e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea') { if (e.key === 'Escape') e.target.blur(); return; }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.setState(s => ({ cmd: !s.cmd })); return; }
+      if (e.key === '?') { this.setState(s => ({ keys: !s.keys })); return; }
+      if (e.key === 'Escape') { this.setState({ cmd: false, keys: false, ambient: false, np: false, qOpen: false }); return; }
+      if (e.key.toLowerCase() === 'q') { this.setState(x => ({ qOpen: !x.qOpen })); return; }
+      if (e.key === ' ') { e.preventDefault(); this.setState(s => ({ playing: !s.playing })); return; }
+      if (e.key === 'ArrowRight') this.setState(s => ({ t: s.t + 5 }));
+      if (e.key === 'ArrowLeft') this.setState(s => ({ t: Math.max(0, s.t - 5) }));
+      if (e.key.toLowerCase() === 'l') this.setState(s => ({ lyr: !s.lyr, np: true }));
+      if (e.key.toLowerCase() === 'f') this.setState(s => ({ back: !s.back }));
+      if (e.key.toLowerCase() === 'n') this.setState(s => ({ np: !s.np }));
+    };
+    document.addEventListener('keydown', this.onKey);
+  }
+  componentDidMount() { this.ensureClock(); this.ensureKeys(); }
+  componentWillUnmount() { if (this.timer) clearInterval(this.timer); this.timer = null; if (this.onKey) document.removeEventListener('keydown', this.onKey); }
+
+  /* ---------- playback ---------- */
+  current() { const q = this.state.queue; if (!q.length) return null; return q[Math.min(this.state.qi, q.length - 1)] || null; }
+  playAlbum(a, idx) {
+    const q = this.tracks(a).map(t => ({ ...t, album: a }));
+    this.setState({ queue: q, qi: idx || 0, playing: true, t: 0 });
+  }
+  next() { this.setState(s => (s.qi < s.queue.length - 1 ? { qi: s.qi + 1, t: 0 } : { playing: false, t: 0 })); }
+  prev() { this.setState(s => (s.t > 4 ? { t: 0 } : { qi: Math.max(0, s.qi - 1), t: 0 })); }
+  go(screen, extra) { this.setState({ screen, cmd: false, ...(extra || {}) }); }
+
+  /* ---------- view helpers ---------- */
+  thumb(a, size, radius) {
+    return 'flex:0 0 ' + size + 'px;width:' + size + 'px;height:' + size + 'px;display:block;border-radius:' + (radius || 2) + 'px;background:' + this.cover(a) + ';background-size:cover;border:1px solid ' + (this.state.theme === 'light' ? 'oklch(0 0 0/.10)' : 'oklch(1 0 0/.08)');
+  }
+  thumbFull(a) {
+    return 'display:block;width:100%;aspect-ratio:1;border-radius:2px;background:' + this.cover(a) + ';box-shadow:0 6px 18px oklch(0.12 0.012 48/.35);border:1px solid ' + (this.state.theme === 'light' ? 'oklch(0 0 0/.10)' : 'oklch(1 0 0/.08)');
+  }
+  chip(active) {
+    return 'padding:6px 11px;min-height:32px;border-radius:99px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;border:1px solid ' + (active ? 'var(--txt-2)' : 'var(--line)') + ';color:' + (active ? 'var(--txt-1)' : 'var(--txt-3)') + ';background:' + (active ? 'var(--bg-2)' : 'transparent');
+  }
+  micro(active) {
+    return 'padding:2px 7px;border-radius:var(--r-1);white-space:nowrap;border:1px solid ' + (active ? 'var(--txt-3)' : 'transparent') + ';color:' + (active ? 'var(--txt-1)' : 'var(--txt-3)') + ';font:inherit;letter-spacing:.08em;text-transform:uppercase';
+  }
+
+  renderVals() {
+    this.ensureClock(); this.ensureKeys();
+    const s = this.state, mob = s.vp === 'mobile', light = s.theme === 'light';
+    const cur = this.current();
+    const curAlbum = cur ? cur.album : this.album(s.albumId);
+    const p = this.pal(curAlbum);
+    const detA = this.album(s.albumId);
+    const dp = this.pal(detA);
+    const scrKeys = ['home','albums','album','artists','artist','genres','playlists','fav','search','crate','stats','year','settings'];
+    const scr = {}; scrKeys.forEach(k => scr[k] = s.screen === k);
+    const cols = mob ? 2 : (s.dense === 'dense' ? 7 : s.dense === 'comfortable' ? 5 : 4);
+    const pad = mob ? '20px 16px 26px' : '34px 40px 44px';
+
+    /* nav */
+    const navDef = [['home','Today','TD',''],['albums','Albums','AL',this.lib.length],['artists','Artists','AR',new Set(this.lib.map(a=>a.artist)).size],['genres','Genres','GN',new Set(this.lib.map(a=>a.genre)).size],['playlists','Playlists','PL',7],['fav','Favourites','FV',12],['crate','Crate','CR',''],['stats','Statistics','ST',''],['year','Listening year','YR','2026'],['queue','Queue','QU',s.queue.length||''],['settings','Settings','SE','']];
+    const nav = navDef.map(([k,label,code,count]) => {
+      const active = k === 'queue' ? s.qOpen : s.screen === k;
+      return { label, code, count: String(count), go: k === 'queue' ? () => this.setState(x => ({ qOpen: !x.qOpen })) : () => this.go(k),
+        style: 'display:flex;align-items:center;gap:10px;padding:8px 10px;min-height:36px;border-radius:var(--r-2);font-size:14.5px;color:' + (active?'var(--txt-1)':'var(--txt-2)') + ';background:' + (active?'var(--bg-2)':'transparent') };
+    });
+    const tabDef = [['home','Today','TD'],['albums','Albums','AL'],['search','Search','SR'],['crate','Crate','CR'],['stats','Stats','ST']];
+    const tabs = tabDef.map(([k,label,code]) => ({ label, code, go: () => this.go(k),
+      style: 'flex:1;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:var(--r-2);color:' + (s.screen===k?'var(--txt-1)':'var(--txt-3)') + ';background:' + (s.screen===k?'var(--bg-2)':'transparent') }));
+
+    const av = a => ({ ...a, open: () => this.go('album', { albumId: a.id, back: false }), play: () => this.playAlbum(a, 0),
+      thumbFull: this.thumbFull(a), thumb36: this.thumb(a, 36), thumb56: this.thumb(a, 56), thumb96: this.thumb(a, 96),
+      tip: a.title + ' · ' + a.artist, labels: s.dense !== 'dense' && !s.big, ago: this.ago(a.last), resume: 'resume · ' + this.ms(60 + a.hue % 90) + ' in', plays: a.plays + ' plays' });
+
+    /* home */
+    const byLast = this.lib.filter(a => a.last).sort((a, b) => new Date(b.last) - new Date(a.last));
+    const stale = this.lib.slice().sort((a, b) => new Date(a.last || '2000-01-01') - new Date(b.last || '2000-01-01'));
+    const pick = stale[2];
+    const home = {
+      greeting: 'Good evening',
+      stamp: s.clock + ' · 28 aug 2026 · 56 albums on the shelf',
+      cont: byLast.slice(0, 3).map(av), recent: this.lib.slice(0, 8).map(av), stale: stale.slice(0, 4).map(av),
+      pick: { ...av(pick), reason: 'Bought eleven months ago. Played once, on ' + this.dateStr(pick.last) + '. Nothing has touched it since.' },
+      onThisDay: [{ year: '2025', title: 'A Love Supreme', artist: 'John Coltrane' }, { year: '2024', title: 'Spirit of Eden', artist: 'Talk Talk' }, { year: '2023', title: 'Selected Ambient Works 85–92', artist: 'Aphex Twin' }]
+    };
+
+    /* albums grid */
+    const sortMap = { added: (a, b) => a.added - b.added, artist: (a, b) => a.artist.localeCompare(b.artist), year: (a, b) => a.year - b.year, plays: (a, b) => b.plays - a.plays };
+    let items = this.lib.slice().sort(sortMap[s.sortBy]);
+    if (s.big) { const out = []; for (let i = 0; i < 800; i++) { const b = this.lib[i % this.lib.length]; out.push({ ...b, id: b.id + '-c' + i, hue: (b.hue + i * 17) % 360 }); } items = out; }
+    const cw = s.big ? 54 : 0;
+    const grid = {
+      count: (s.big ? '800 albums · 9 214 tracks · 612 GB' : this.lib.length + ' albums · 641 tracks · 41.2 GB · library complete'),
+      items: items.map(av),
+      style: s.big ? 'display:grid;grid-template-columns:repeat(auto-fill,minmax(' + cw + 'px,1fr));gap:5px' : 'display:grid;grid-template-columns:repeat(' + cols + ',minmax(0,1fr));gap:' + (mob ? '12px' : '20px'),
+      styleFixed: 'display:grid;grid-template-columns:repeat(' + cols + ',minmax(0,1fr));gap:' + (mob ? '12px' : '20px'),
+      sorts: [['added','Recently added'],['artist','Artist'],['year','Year'],['plays','Most played']].map(([k, label]) => ({ label, go: () => this.setState({ sortBy: k }), style: this.chip(s.sortBy === k) })),
+      densities: [['comfortable','Comfortable'],['dense','Dense'],['large','Large']].map(([k, label]) => ({ label, go: () => this.setState({ dense: k, big: false }), style: this.chip(s.dense === k && !s.big) })),
+      toggleBig: () => this.setState(x => ({ big: !x.big })), bigStyle: this.chip(s.big), bigLabel: s.big ? 'Showing 800' : 'Stress test · 800'
+    };
+
+    /* album detail */
+    const dTracks = this.tracks(detA);
+    const runtime = dTracks.reduce((n, t) => n + t.dur, 0);
+    const isVA = detA.artist === 'Various Artists';
+    const det = {
+      ...detA, kicker: (detA.special === 'classical3' ? 'Single work · three movements' : isVA ? 'Compilation · 40 tracks' : detA.genre + ' · album'),
+      titleStyle: 'font-family:var(--f-disp);font-weight:300;margin:8px 0 0;line-height:1.06;letter-spacing:-.015em;text-wrap:pretty;font-size:' + (detA.title.length > 60 ? (mob ? '26px' : '38px') : detA.title.length > 30 ? (mob ? '30px' : '46px') : (mob ? '34px' : '58px')),
+      artWrap: 'position:relative;flex:0 0 ' + (mob ? '100%' : '340px') + ';width:' + (mob ? '100%' : '340px'),
+      glow: 'position:absolute;inset:-14%;border-radius:50%;filter:blur(56px);opacity:' + (light ? '.5' : '.62') + ';background:radial-gradient(circle,' + dp.glow + ' 0%,transparent 68%);transition:background var(--dur-slow) var(--ease)',
+      artStyle: 'position:relative;display:block;width:100%;aspect-ratio:1;border-radius:2px;background:' + this.cover(detA) + ';box-shadow:0 24px 60px oklch(0.12 0.012 48/.5);border:1px solid ' + (light ? 'oklch(0 0 0/.12)' : 'oklch(1 0 0/.10)') + ';overflow:hidden;transform:' + (s.back ? 'rotateY(-4deg)' : 'none') + ';transition:transform var(--dur-mid) var(--ease)',
+      noArt: detA.cv === 'none', typeCover: detA.cv === 'type', letter: detA.title[0],
+      flipHint: s.back ? 'F · turn to front' : 'F · turn the sleeve over',
+      trackCount: dTracks.length + ' tracks', runtime: this.hms(runtime), fmt: this.fmtLong(detA.fmt),
+      provenance: 'Acquired ' + this.dateStr('2024-0' + (1 + detA.hue % 9) + '-1' + (detA.year % 8)) + ' · ' + detA.plays + ' plays · last on ' + this.dateStr(detA.last) + ' · ' + (detA.fmt === '16/44.1' ? 'never resampled' : 'resampled to 48 kHz on 4 of those'),
+      play: () => this.playAlbum(detA, 0), queue: () => this.setState({ qOpen: true }), fav: () => {}, favLabel: detA.plays > 100 ? 'In favourites' : 'Add to favourites',
+      openArtist: () => this.go('artist', { artistName: detA.artist }),
+      flip: () => this.setState(x => ({ back: !x.back })), front: !s.back, back: s.back,
+      vaCol: 'width:' + (isVA ? '170px' : '0') + ';flex:0 0 ' + (isVA ? '170px' : '0') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px;color:var(--txt-3)',
+      tracks: dTracks.map((t, i) => ({ ...t, dur: this.ms(t.dur), fmt: this.fmtLong(t.fmt).replace('FLAC · ', ''), artist: isVA ? t.artist : '',
+        vaCol: 'width:' + (isVA ? '170px' : '0') + ';flex:0 0 ' + (isVA ? '170px' : '0') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px;color:var(--txt-3)',
+        play: () => this.playAlbum(detA, i),
+        row: 'display:flex;gap:12px;align-items:center;width:100%;padding:10px 8px;border-bottom:1px solid var(--line-soft);border-radius:var(--r-1);background:' + (cur && cur.albumId === detA.id && cur.no === t.no ? (light ? 'oklch(0.90 0.01 268)' : 'oklch(0.24 0.012 268)') : 'transparent') })),
+      note: detA.special === 'classical3' ? 'Three movements, sixty-eight minutes, one idea held so long it stops being sad and becomes weather. The second movement is the one people quote; the first is the one that costs something.' : 'Recorded over four evenings. The room is audible on the quieter tracks — the engineer left it in, which is the whole reason this pressing is the one to own.',
+      credits: [{ role: 'Producer', name: 'Teo Macero' }, { role: 'Engineer', name: 'Fred Plaut' }, { role: 'Studio', name: '30th Street Studio, New York' }, { role: 'Mastering', name: 'Bernie Grundman, 1997 transfer' }],
+      tech: [{ k: 'Release', v: detA.year + ' · ' + detA.genre }, { k: 'Source', v: 'CD rip · EAC secure mode' }, { k: 'Encoding', v: this.fmtLong(detA.fmt) + ' · level 8' }, { k: 'ReplayGain', v: 'album −8.42 dB · track −8.9 dB' }, { k: 'MusicBrainz', v: 'release ' + detA.id.slice(0, 8) + '…' }],
+      bio: detA.cv === 'none' ? 'No release context. MusicBrainz has no match for this folder, and enrichment last failed 3 days ago.' : 'Release context from MusicBrainz: one of the defining sessions of its year, reissued nine times since.',
+      bioStyle: 'font-family:var(--f-mono);font-size:10.5px;line-height:1.9;margin-top:22px;padding:14px;border:1px ' + (detA.cv === 'none' ? 'dashed' : 'solid') + ' var(--line);border-radius:var(--r-2);color:var(--txt-3)'
+    };
+
+    /* artists */
+    const names = Array.from(new Set(this.lib.map(a => a.artist))).sort((a, b) => a.localeCompare(b));
+    const artists = names.map(n => { const al = this.lib.filter(x => x.artist === n); return { name: n, meta: al.length + ' · ' + al.reduce((k, x) => k + x.plays, 0) + ' plays', thumb36: this.thumb(al[0], 36), open: () => this.go('artist', { artistName: n }) }; });
+    const aAl = this.lib.filter(x => x.artist === s.artistName).sort((a, b) => a.year - b.year);
+    const art = { name: s.artistName, meta: aAl.length + (aAl.length === 1 ? ' album' : ' albums') + ' · ' + aAl.reduce((k, x) => k + x.plays, 0) + ' plays · first heard March 2019',
+      bio: aAl.length === 1 ? 'No biography. MusicBrainz has an artist entry but no text, and ListenBrainz has nothing to add.' : 'Biography from MusicBrainz. Fourteen records here span 1974 to 2017 — the ambient ones get played at night, the song records almost never.',
+      bioStyle: 'font-family:var(--f-' + (aAl.length === 1 ? 'mono' : 'disp') + ');font-size:' + (aAl.length === 1 ? '10.5px' : '17px') + ';line-height:1.8;color:' + (aAl.length === 1 ? 'var(--txt-3)' : 'var(--txt-2)') + ';max-width:66ch;margin-top:18px;padding:' + (aAl.length === 1 ? '14px' : '0') + ';border:' + (aAl.length === 1 ? '1px dashed var(--line)' : '0') + ';border-radius:var(--r-2)',
+      albums: aAl.map(a => ({ ...av(a), plays: a.plays + ' plays' })) };
+
+    /* genres, playlists, favourites */
+    const gNames = Array.from(new Set(this.lib.map(a => a.genre)));
+    const genres = gNames.map(g => { const al = this.lib.filter(a => a.genre === g); const gp = this.pal(al[0]);
+      return { name: g, meta: al.length + ' albums · ' + al.reduce((k, x) => k + x.n, 0) + ' tracks', go: () => this.go('albums'),
+        style: 'text-align:left;padding:18px;border-radius:var(--r-2);border:1px solid var(--line);min-height:110px;background:linear-gradient(160deg,' + gp.wash + ' 0%,transparent 90%)' }; });
+    const playlists = [['Night driving', 42, 'Smart · rule-based'], ['Sunday morning, slowly', 18, ''], ['24-bit only', 9, 'Smart · rule-based'], ['For the good speakers', 26, ''], ['Records I keep failing to finish', 11, ''], ['Winter 2025', 31, ''], ['Party queue', 0, 'Planned']].map(([name, n, tag], i) => ({ name, meta: n + ' tracks · ' + this.hms(n * 280), tag, thumb36: this.thumb(this.lib[i * 5], 36, 2),
+      tagStyle: 'font-family:var(--f-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;padding:3px 8px;border-radius:99px;border:1px ' + (tag === 'Planned' ? 'dashed' : 'solid') + ' var(--line);color:var(--txt-3);opacity:' + (tag ? 1 : 0) }));
+    const favList = this.lib.slice().sort((a, b) => b.plays - a.plays).slice(0, 12);
+    const favs = { meta: '12 albums · loved, not liked · no algorithm reads this', items: favList.map(av) };
+
+    /* search */
+    const q = s.q.trim().toLowerCase();
+    let groups = [];
+    if (q) {
+      const alm = this.lib.filter(a => (a.title + a.artist).toLowerCase().includes(q));
+      const trk = [];
+      this.lib.slice(0, 20).forEach(a => this.tracks(a).forEach((t, i) => { if (t.title.toLowerCase().includes(q) && trk.length < 6) trk.push({ ...t, album: a, i }); }));
+      if (alm.length) groups.push({ label: 'Albums · ' + alm.length, items: alm.slice(0, 6).map(a => ({ title: a.title, sub: a.artist + ' · ' + a.year, meta: this.fmtLong(a.fmt).replace('FLAC · ', ''), thumb36: this.thumb(a, 36), open: () => this.go('album', { albumId: a.id, back: false }) })) });
+      if (trk.length) groups.push({ label: 'Tracks · ' + trk.length, items: trk.map(t => ({ title: t.title, sub: t.album.title, meta: this.ms(t.dur), thumb36: this.thumb(t.album, 36), open: () => this.playAlbum(t.album, t.i) })) });
+    }
+    const search = { q: s.q, onInput: e => this.setState({ q: e.target.value }), ask: s.ask, askToggle: () => this.setState(x => ({ ask: !x.ask })), askStyle: this.chip(s.ask),
+      empty: !q && !s.ask, none: !!q && groups.length === 0, hasResults: groups.length > 0, groups,
+      recents: ['talk talk', '24 bit', 'yaman', 'basinski', 'unplayed jazz'].map(l => ({ label: l, go: () => this.setState({ q: l }) })),
+      askResults: [this.lib[39], this.lib[3], this.lib[52]].map(a => ({ ...av(a), why: 'quiet · 9 plays after 22:00 · nothing above mezzo-forte' })),
+      tiers: [['In your library', this.lib[27], 'Owned · 24/96'], ['Free and legal', this.lib[41], 'Archive.org'], ['Available to buy', this.lib[16], 'Bandcamp · £9'], ['Findable elsewhere', this.lib[24], 'Discogs seller']].map(([tier, a, st]) => ({ tier, title: a.title, artist: a.artist, thumb36: this.thumb(a, 36), state: st, stateStyle: 'font-family:var(--f-mono);font-size:9.5px;color:var(--txt-3);border:1px solid var(--line);border-radius:99px;padding:3px 9px' })) };
+
+    /* crate */
+    const crateList = this.lib.filter(a => a.plays < 60 || (a.last && new Date(a.last) < new Date('2026-02-01'))).slice(0, 8);
+    const ci = s.crateI, cc = crateList[ci];
+    const cpal = cc ? this.pal(cc) : p;
+    const crate = { wrap: 'min-height:100%;display:flex;align-items:center;justify-content:center;padding:' + (mob ? '20px' : '40px'),
+      hasCard: !!cc && !s.crateEnd, done: !cc || s.crateEnd, session: s.dug + ' dug · ' + s.played + ' played',
+      title: cc ? cc.title : '', artist: cc ? cc.artist : '',
+      reason: cc ? (cc.plays === 0 ? 'Never played. It has been on the shelf since the day it was ripped.' : 'You haven\'t played this since ' + this.dateStr(cc.last) + '. ' + cc.plays + ' plays, all of them before then.') : '',
+      tech: cc ? cc.year + ' · ' + cc.genre + ' · ' + this.fmtLong(cc.fmt) : '',
+      card: cc ? 'width:100%;aspect-ratio:1;border-radius:2px;background:' + this.cover(cc) + ';box-shadow:0 30px 70px oklch(0.10 0.012 48/.55);border:1px solid oklch(1 0 0/.10);position:relative;animation:nyxrise var(--dur-slow) var(--ease)' : '',
+      stack1: 'position:absolute;inset:0;transform:translate(10px,10px) scale(.985);border-radius:2px;background:' + (crateList[ci + 1] ? this.cover(crateList[ci + 1]) : 'var(--bg-2)') + ';filter:brightness(.5);opacity:.9',
+      stack2: 'position:absolute;inset:0;transform:translate(20px,20px) scale(.97);border-radius:2px;background:var(--bg-2);opacity:.7',
+      play: () => { this.setState(x => ({ dug: x.dug + 1, played: x.played + 1, crateEnd: true })); if (cc) this.playAlbum(cc, 0); },
+      next: () => this.setState(x => ({ crateI: x.crateI + 1, dug: x.dug + 1 })),
+      bury: () => { this.buried[cc.id] = 1; this.setState(x => ({ crateI: x.crateI + 1, dug: x.dug + 1 })); },
+      reset: () => this.setState({ crateI: 0, dug: 0, played: 0, crateEnd: false }),
+      doneTitle: s.crateEnd ? 'Pulled out.' : 'You have dug through the whole crate.',
+      doneBody: s.crateEnd ? 'Session ended when you committed to a record.\nThat is the correct way to end a session.' : 'Nothing left that you have neglected long enough to qualify.\nCome back in a month; the shelf will have moved on.',
+      summary: [{ n: s.dug, label: 'dug' }, { n: s.played, label: 'played' }, { n: Object.keys(this.buried).length, label: 'buried' }] };
+
+    /* stats */
+    const rng = this.rng('clock-2026');
+    const clock = [];
+    for (let d = 0; d < 7; d++) for (let h = 0; h < 24; h++) {
+      const evening = h >= 20 || h <= 1 ? 1 : h >= 17 ? .62 : h >= 9 && h <= 16 ? .3 : .08;
+      const wk = d >= 5 ? 1.25 : 1;
+      const v = Math.min(1, evening * wk * (.45 + rng()));
+      clock.push({ tip: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][d] + ' ' + String(h).padStart(2, '0') + ':00 · ' + Math.round(v * 14) + ' plays',
+        style: 'height:14px;border-radius:1px;background:' + (v < .12 ? 'var(--bg-2)' : 'oklch(' + (light ? (0.94 - v * 0.42) : (0.30 + v * 0.48)).toFixed(3) + ' ' + (0.02 + v * 0.075).toFixed(3) + ' ' + (66 - v * 16).toFixed(0) + ')') });
+    }
+    const artAgg = {}; this.lib.forEach(a => artAgg[a.artist] = (artAgg[a.artist] || 0) + a.plays);
+    const topA = Object.entries(artAgg).sort((a, b) => b[1] - a[1]).slice(0, 7);
+    const maxA = topA[0][1];
+    const gAgg = {}; this.lib.forEach(a => gAgg[a.genre] = (gAgg[a.genre] || 0) + a.plays);
+    const gTot = Object.values(gAgg).reduce((a, b) => a + b, 0);
+    const gHues = { Jazz: 62, Rock: 28, Electronic: 96, Ambient: 128, Classical: 44, Hindustani: 12, World: 78 };
+    const fmtAgg = {}; this.lib.forEach(a => fmtAgg[a.fmt] = (fmtAgg[a.fmt] || 0) + a.plays);
+    const fTot = Object.values(fmtAgg).reduce((a, b) => a + b, 0);
+    const rangeLabel = { week: 'This week', month: 'This month', year: 'This year', all: 'All time' };
+    const mult = { week: .02, month: .09, year: 1, all: 3.4 }[s.range];
+    const stats = {
+      kpiGrid: 'display:grid;grid-template-columns:repeat(' + (mob ? 2 : 5) + ',minmax(0,1fr));gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);border-radius:var(--r-2);margin:20px 0 26px;overflow:hidden',
+      ranges: Object.keys(rangeLabel).map(k => ({ label: rangeLabel[k], go: () => this.setState({ range: k }), style: this.chip(s.range === k) })),
+      kpis: [
+        { label: 'Time', value: (268000 * mult / 3600).toFixed(1) + ' h', sub: this.hms(268000 * mult) + ' · ' + rangeLabel[s.range].toLowerCase() },
+        { label: 'Plays', value: Math.round(4213 * mult).toLocaleString('en-GB'), sub: Math.round(641 * Math.min(1, mult)) + ' distinct tracks' },
+        { label: 'Albums', value: String(Math.round(56 * Math.min(1, mult * 1.4))), sub: 'of 56 on the shelf' },
+        { label: 'Streak', value: Math.round(41 * Math.min(1, mult * 2)) + ' d', sub: 'longest · ended 12 Jul' },
+        { label: 'New', value: Math.round(18 + mult) + ' %', sub: 'first-time listens' }
+      ],
+      days: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(l => ({ label: l })), clock,
+      topArtists: topA.map(([name, plays]) => ({ name, plays: Math.round(plays * Math.min(mult, 1.6)), bar: 'display:block;height:100%;width:' + (plays / maxA * 100).toFixed(1) + '%;background:var(--sig);border-radius:99px' })),
+      genres: Object.entries(gAgg).sort((a, b) => b[1] - a[1]).map(([g, v]) => ({ label: g + ' · ' + Math.round(v / gTot * 100) + '%', tip: g, seg: 'width:' + (v / gTot * 100) + '%;background:oklch(' + (light ? .58 : .68) + ' .09 ' + (gHues[g] || 252) + ')', dot: 'width:8px;height:8px;border-radius:2px;background:oklch(' + (light ? .58 : .68) + ' .09 ' + (gHues[g] || 252) + ')' })),
+      formats: Object.entries(fmtAgg).sort((a, b) => b[1] - a[1]).map(([f, v]) => ({ label: this.fmtLong(f), pct: (v / fTot * 100).toFixed(1) + ' %', bar: 'height:100%;width:' + (v / fTot * 100) + '%;background:var(--sig);border-radius:99px' }))
+    };
+
+    /* listening year */
+    const yearFrames = [
+      { chapter: 'Chapter one', season: 'January — March', title: 'You began the year in the dark, and stayed there.', body: 'Eighty-one per cent of your January listening happened after nine at night, with the lights presumably low and the same four records in rotation. Talk Talk\'s Spirit of Eden was played eleven times in eighteen days. Nothing you played in January was new to you.', figures: [{ n: '81%', label: 'after 21:00' }, { n: '11', label: 'plays · Spirit of Eden' }] },
+      { chapter: 'Chapter two', season: 'April — June', title: 'Spring was when the classical shelf finally earned its keep.', body: 'For three years the Górecki sat unplayed. In May you played it nine times, twice in a single evening, and the second listen ran to the end — which the data says you almost never do with anything over an hour.', figures: [{ n: '9', label: 'plays in May' }, { n: '68 min', label: 'listened whole' }] },
+      { chapter: 'Chapter three', season: 'July', title: 'A month of one record, played at exactly the same hour.', body: 'Harbour Lights, forty-one consecutive evenings, starting between 22:10 and 22:40 every time. This is the closest thing your history has to a ritual, and it is the only streak you have never broken by accident.', figures: [{ n: '41', label: 'consecutive nights' }, { n: '22:24', label: 'median start' }] },
+      { chapter: 'Chapter four', season: 'August', title: 'The crate gave back four records you had written off.', body: 'You dug thirty-one times and pulled four out. Ram Narayan had gone twenty-three months untouched; it is now in your top twenty for the year. The other twenty-seven you buried, which is also a decision.', figures: [{ n: '31', label: 'dug' }, { n: '4', label: 'kept' }] },
+      { chapter: 'Chapter five', season: 'The year', title: 'Two hundred and twelve hours, all of it yours.', body: 'Fifty-six albums, six hundred and forty-one tracks, nothing recommended to you by anything. Twenty-two per cent of your listening was 24-bit — which, given that only nine of your albums are, means you sought them out. Nobody is going to see this page but you.', figures: [{ n: '212 h', label: 'total' }, { n: '22%', label: '24-bit' }] }
+    ].map((f, i) => {
+      const a = this.lib[[27, 14, 33, 12, 3][i]]; const fp = this.pal(a);
+      return { ...f, style: 'scroll-snap-align:start;min-height:100%;display:flex;align-items:center;padding:' + (mob ? '40px 22px' : '70px 8vw') + ';background:radial-gradient(120% 90% at ' + (i % 2 ? '85%' : '15%') + ' 12%,' + fp.wash + ' 0%,transparent 62%)' };
+    });
+
+    /* queue */
+    const qUp = s.queue.slice(s.qi + 1);
+    const qv = { n: String(Math.max(0, s.queue.length - s.qi - 1)), from: cur ? 'playing from ' + cur.album.title : 'nothing playing',
+      open: s.qOpen, close: () => this.setState({ qOpen: false }), isEmpty: qUp.length === 0,
+      clear: () => this.setState({ queue: s.queue.slice(0, s.qi + 1) }),
+      panel: 'position:absolute;top:0;right:0;bottom:' + (mob ? 118 : 78) + 'px;width:' + (mob ? '100%' : '344px') + ';z-index:35;display:flex;flex-direction:column;background:var(--bg-1);border-left:1px solid var(--line);box-shadow:-24px 0 60px oklch(0.12 0.012 48/.45);animation:nyxslide var(--dur-mid) var(--ease)',
+      save: () => {}, history: s.queue.slice(Math.max(0, s.qi - 2), s.qi).map(t => ({ title: t.title, dur: this.ms(t.dur), thumb36: this.thumb(t.album, 36) })),
+      nowStyle: 'display:flex;gap:12px;align-items:center;padding:14px 12px;margin-top:6px;border-radius:var(--r-2);background:' + p.deep + ';border-left:2px solid ' + p.bar,
+      now: cur ? { title: cur.title, sub: cur.album.artist + ' · ' + this.fmtLong(cur.fmt), dur: this.ms(cur.dur), thumb36: this.thumb(cur.album, 36) } : { title: 'Nothing playing', sub: '', dur: '—:—', thumb36: this.thumb(this.lib[0], 36) },
+      up: qUp.map((t, i) => ({ title: t.title, artist: t.album.artist, dur: this.ms(t.dur), i: String(i + 1).padStart(2, '0'), thumb36: this.thumb(t.album, 36),
+        up: () => this.moveQ(s.qi + 1 + i, -1), down: () => this.moveQ(s.qi + 1 + i, 1), remove: () => this.removeQ(s.qi + 1 + i) })) };
+
+    /* now playing + lyrics */
+    const dur = cur ? cur.dur : 300;
+    const pct = Math.min(100, s.t / dur * 100);
+    const nextT = s.queue[s.qi + 1];
+    const lyricMode = cur ? (cur.album.special === 'lyrics' ? 'synced' : cur.album.genre === 'Rock' ? 'plain' : 'none') : 'none';
+    const lines = lyricMode === 'synced'
+      ? this.lyricLines.map(([tt, text], i) => {
+          const nextTime = this.lyricLines[i + 1] ? this.lyricLines[i + 1][0] : 1e9;
+          const active = s.t >= tt && s.t < nextTime;
+          const d = Math.abs(this.lyricLines.findIndex(([x], j) => s.t >= x && s.t < (this.lyricLines[j + 1] ? this.lyricLines[j + 1][0] : 1e9)) - i);
+          const op = active ? 1 : d === 1 ? .5 : d === 2 ? .28 : .14;
+          return { text, seek: () => this.setState({ t: tt, playing: true }),
+            style: 'display:block;width:100%;text-align:left;font-family:var(--f-disp);font-weight:' + (active ? 500 : 300) + ';font-size:' + (mob ? (active ? 24 : 21) : (active ? 34 : 29)) + 'px;line-height:1.38;padding:' + (mob ? 6 : 9) + 'px 0;color:' + (active ? p.lyric : 'var(--txt-1)') + ';opacity:' + op + ';transition:opacity var(--dur-slow) var(--ease),color var(--dur-slow) var(--ease),font-size var(--dur-mid) var(--ease);text-wrap:pretty' };
+        })
+      : lyricMode === 'plain' ? this.plainLyrics.map(t => ({ text: t })) : [];
+    const npv = {
+      open: s.np, expand: () => this.setState({ np: true }), collapse: () => this.setState({ np: false, lyr: false }),
+      toggle: () => this.setState(x => ({ playing: !x.playing })), toggleStop: e => { e.stopPropagation(); this.setState(x => ({ playing: !x.playing })); },
+      prev: () => this.prev(), next: () => this.next(),
+      playLabel: s.playing ? 'Pause' : 'Play', playGlyph: s.playing ? 'width:10px;height:11px;border-left:3px solid currentColor;border-right:3px solid currentColor' : 'width:0;height:0;border-left:11px solid currentColor;border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:3px',
+      playGlyphBig: s.playing ? 'width:13px;height:15px;border-left:4px solid currentColor;border-right:4px solid currentColor' : 'width:0;height:0;border-left:15px solid currentColor;border-top:9px solid transparent;border-bottom:9px solid transparent;margin-left:4px',
+      title: cur ? cur.title : 'Nothing playing', artist: cur ? cur.album.artist : 'Pick a record',
+      albumLine: cur ? cur.album.title + ' · ' + cur.album.year : '', context: cur ? 'from ' + cur.album.title : 'idle',
+      nextTitle: nextT ? nextT.title : 'end of album',
+      time: this.ms(s.t), dur: this.ms(dur),
+      modeStyle: 'font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;color:var(--txt-3);white-space:nowrap;display:' + (mob ? 'none' : 'inline'),
+      barStyle: 'height:100%;width:' + pct + '%;background:' + p.bar + ';border-radius:99px;transition:width 260ms linear',
+      thumb56: this.thumb(curAlbum, 56), thumb44: this.thumb(curAlbum, 44),
+      scrub: e => { const r = e.currentTarget.getBoundingClientRect(); this.setState({ t: Math.max(0, (e.clientX - r.left) / r.width * dur) }); },
+      lyricsToggle: () => this.setState(x => ({ lyr: !x.lyr, np: true })),
+      lyrBtn: 'font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;padding:3px 8px;border-radius:99px;border:1px solid ' + (s.lyr ? 'var(--txt-2)' : 'var(--line)') + ';color:' + (s.lyr ? 'var(--txt-1)' : 'var(--txt-3)'),
+      showArt: !s.lyr, showLyrics: s.lyr,
+      sheet: 'position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;background:' + p.deep + ';animation:nyxup var(--dur-slow) var(--ease);overflow:hidden',
+      sheetWash: 'position:absolute;inset:0;background:radial-gradient(110% 80% at 50% 0%,' + p.wash + ' 0%,transparent 70%);transition:background var(--dur-slow) var(--ease)',
+      body: 'flex:1;min-height:0;display:flex;' + (mob ? 'flex-direction:column;align-items:center;gap:26px;padding:14px 24px 30px;overflow-y:auto' : 'flex-direction:row;align-items:center;gap:64px;padding:20px 7vw 50px'),
+      artWrap: 'position:relative;flex:0 0 auto;width:' + (mob ? '78%' : 'min(42vh,460px)') + ';max-width:460px',
+      glow: 'position:absolute;inset:-12%;border-radius:50%;filter:blur(64px);opacity:.6;background:radial-gradient(circle,' + p.glow + ' 0%,transparent 68%);transition:background var(--dur-slow) var(--ease)',
+      art: 'position:relative;width:100%;aspect-ratio:1;border-radius:2px;background:' + this.cover(curAlbum) + ';box-shadow:0 30px 80px oklch(0.10 0.012 48/.6);border:1px solid oklch(1 0 0/.10);transition:background var(--dur-slow) var(--ease)',
+      info: 'flex:1;min-width:0;display:flex;flex-direction:column;' + (mob ? 'align-items:center;text-align:center;width:100%' : 'align-items:flex-start;max-width:520px'),
+      bigTitle: 'font-family:var(--f-disp);font-weight:300;line-height:1.1;margin-top:10px;text-wrap:pretty;font-size:' + (cur && cur.title.length > 44 ? (mob ? '24px' : '34px') : (mob ? '28px' : '46px')),
+      lyrWrap: 'flex:1;min-height:0;overflow-y:auto;display:flex;justify-content:center;align-items:flex-start;padding:' + (mob ? '10px 24px 60px' : '5vh 6vw 14vh')
+    };
+
+    /* ambient */
+    const ambRng = this.rng('meters' + Math.floor(s.t * 2));
+    const amb = { open: s.ambient, close: () => this.setState({ ambient: false }), clock: s.clock,
+      toggleBurn: () => this.setState(x => ({ burn: !x.burn })), burnStyle: this.chip(s.burn), burnLabel: s.burn ? 'OLED-safe · on' : 'OLED-safe · off',
+      wash: 'position:absolute;inset:-10%;background:radial-gradient(60% 60% at 40% 45%,' + p.glow + ' 0%,transparent 70%);filter:blur(80px);opacity:' + (s.burn ? .45 : .6) + ';animation:nyxdrift ' + (s.burn ? '48s' : '90s') + ' ease-in-out infinite',
+      stage: 'position:relative;height:100%;display:flex;align-items:center;gap:' + (mob ? '30px' : '7vw') + ';padding:' + (mob ? '40px 30px' : '6vh 8vw') + ';flex-direction:' + (mob ? 'column' : 'row') + ';justify-content:center;' + (s.burn ? 'animation:nyxdrift 62s ease-in-out infinite' : ''),
+      artWrap: 'position:relative;flex:0 0 auto;width:' + (mob ? '70%' : 'min(56vh,620px)'),
+      glow: 'position:absolute;inset:-10%;border-radius:50%;filter:blur(70px);opacity:.55;background:radial-gradient(circle,' + p.glow + ' 0%,transparent 70%)',
+      art: 'position:relative;width:100%;aspect-ratio:1;border-radius:2px;background:' + this.cover(curAlbum) + ';box-shadow:0 40px 100px oklch(0.08 0.012 48/.7)',
+      textCol: 'flex:1;min-width:0;max-width:640px;' + (mob ? 'text-align:center' : ''),
+      title: 'font-family:var(--f-disp);font-weight:300;font-size:' + (mob ? '34px' : 'clamp(44px,5.4vw,84px)') + ';line-height:1.05;margin-top:16px;text-wrap:pretty',
+      next: nextT ? nextT.title : 'end of album',
+      meters: Array.from({ length: 24 }, () => { const v = s.playing ? .18 + ambRng() * .82 : .06; return { style: 'flex:1;height:' + (v * 100).toFixed(0) + '%;background:' + p.bar + ';opacity:' + (s.burn ? .5 : .8) + ';border-radius:1px;transition:height 240ms var(--ease)' }; }) };
+
+    /* command palette */
+    const cq = s.cmdQ.trim().toLowerCase();
+    let cmdItems = [
+      ...nav.map(n => ({ kind: 'Go', label: n.label, hint: '', run: () => { n.go(); this.setState({ cmd: false }); } })),
+      { kind: 'Do', label: s.playing ? 'Pause' : 'Play', hint: 'Space', run: () => this.setState({ playing: !s.playing, cmd: false }) },
+      { kind: 'Do', label: 'Ambient display', hint: '', run: () => this.setState({ ambient: true, cmd: false }) },
+      { kind: 'Do', label: 'Toggle lyrics', hint: 'L', run: () => this.setState({ lyr: !s.lyr, np: true, cmd: false }) },
+      { kind: 'Do', label: light ? 'Switch to night theme' : 'Switch to day theme', hint: '', run: () => this.setState({ theme: light ? 'dark' : 'light', cmd: false }) },
+      ...this.lib.slice(0, 40).map(a => ({ kind: 'Play', label: a.title + ' · ' + a.artist, hint: a.year, run: () => { this.playAlbum(a, 0); this.setState({ cmd: false }); } }))
+    ];
+    if (cq) cmdItems = cmdItems.filter(c => c.label.toLowerCase().includes(cq));
+    const cmd = { open: s.cmd, q: s.cmdQ, onInput: e => this.setState({ cmdQ: e.target.value }), close: () => this.setState({ cmd: false }), stop: e => e.stopPropagation(), items: cmdItems.slice(0, 9) };
+
+    const keys = { open: s.keys, close: () => this.setState({ keys: false }), rows: [
+      { key: 'Space', label: 'Play / pause' }, { key: '← →', label: 'Seek 5 seconds' }, { key: 'N', label: 'Now Playing' },
+      { key: 'L', label: 'Lyrics' }, { key: 'F', label: 'Flip the sleeve' }, { key: '⌘K', label: 'Command palette' },
+      { key: 'G then A', label: 'Go to albums' }, { key: 'G then C', label: 'Crate mode' }, { key: 'G then S', label: 'Statistics' },
+      { key: '/', label: 'Search' }, { key: 'Q', label: 'Queue' }, { key: '?', label: 'This overlay' },
+      { key: 'Esc', label: 'Close anything' }, { key: 'D', label: 'Ambient display' }] };
+
+    /* settings + system states */
+    const setRow = (label, hint, value, kind) => ({ label, hint, value, valStyle: 'font-family:var(--f-mono);font-size:10.5px;padding:5px 11px;border-radius:99px;border:1px ' + (kind === 'soon' ? 'dashed' : 'solid') + ' var(--line);color:' + (kind === 'soon' ? 'var(--txt-3)' : 'var(--txt-2)') + ';white-space:nowrap' });
+    const settings = [
+      { section: 'Library and scanning', rows: [setRow('Server', 'navidrome · http://nyx.local:4533', 'connected'), setRow('Scan', 'last full scan 2 h ago · 56 albums, 641 tracks', 'rescan'), setRow('Watch folders', '/mnt/music · inotify', 'on')] },
+      { section: 'Playback', rows: [setRow('Gapless', 'preloads the next track 8 s early', 'on'), setRow('ReplayGain', 'album gain preserves the record as sequenced', 'album'), setRow('Crossfade', 'off is correct for albums', 'off'), setRow('Quality away from home', 'cellular · transcode to 320 kbps opus', 'adaptive'), setRow('Quality at home', 'wired to the Pi · never transcode', 'bit-perfect')] },
+      { section: 'Appearance', rows: [setRow('Theme', 'night is the primary design', s.theme === 'light' ? 'day' : 'night'), setRow('Artwork drives the palette', 'clamped to WCAG AA regardless of position', (this.props.paletteStrength ?? 70) + ' %'), setRow('Density', 'affects grids, not type sizes', s.dense)] },
+      { section: 'Lyrics and enrichment', rows: [setRow('Lyrics source', 'lrclib · synced preferred, plain accepted', 'lrclib'), setRow('Genre and context', 'musicbrainz · file tags ignored', 'musicbrainz'), setRow('When offline', 'absent states, never spinners', 'degrade quietly')] },
+      { section: 'Statistics and privacy', rows: [setRow('Play history', 'stored on the Pi, never leaves it', 'local only'), setRow('ListenBrainz submission', '', 'off'), setRow('Listening year', 'generated 1 January', 'on')] },
+      { section: 'Devices and handoff', rows: [setRow('This device', 'MacBook Pro · 48 kHz output', 'playing here'), setRow('Handoff', 'move playback between devices', 'planned', 'soon'), setRow('NFC tap-to-play', 'pair a printed card to an album', 'planned', 'soon'), setRow('Party queue', 'QR code, guests can only add', 'planned', 'soon')] },
+      { section: 'About', rows: [setRow('Nyx Audio', '0.4.1 · web client', 'up to date'), setRow('Library', '56 albums · 641 tracks · 41.2 GB · 212 h played', ''), setRow('Backend', 'navidrome 0.53 · opensubsonic', 'ok')] }
+    ];
+    const sysDefs = {
+      unreachable: { tone: 'var(--neg)', kicker: 'Server unreachable', title: 'The Pi is not answering.', body: 'nyx.local:4533 · last seen 14 minutes ago\nYour queue is intact and will resume when it returns.\nNothing has been lost.', action: 'Retry now', bar: 0 },
+      scanning: { tone: 'var(--warn)', kicker: 'Scanning', title: 'Reading the shelves.', body: '412 of 641 tracks · 3 new albums found\nYou can browse what is already indexed.', action: 'Run in background', bar: 64 },
+      empty: { tone: 'var(--txt-3)', kicker: 'Empty library', title: 'Nothing on the shelves yet.', body: 'Point Nyx at a folder of FLACs and it will do the rest.\nThe first scan of 500 albums takes about four minutes.', action: 'Choose a folder', bar: 0 },
+      offline: { tone: 'var(--warn)', kicker: 'No internet', title: 'Enrichment is unavailable.', body: 'Lyrics, genres and biographies come from the internet.\nPlayback is unaffected — the music is on your own hardware.\nAbsent states are shown instead of spinners.', action: 'Continue offline', bar: 0 },
+      firstrun: { tone: 'var(--pos)', kicker: 'First run · step 3 of 3', title: 'Found 56 albums. Four of them need you.', body: '52 albums matched cleanly\n1 album has no artwork\n2 albums look like upscaled MP3s sold as FLAC\n1 release could not be matched in MusicBrainz', action: 'Open library health', bar: 100 }
+    };
+    const sd = sysDefs[s.sys];
+    const sys = { tabs: Object.keys(sysDefs).map(k => ({ label: k, go: () => this.setState({ sys: k }), style: this.chip(s.sys === k) })),
+      tone: sd.tone, kicker: sd.kicker, title: sd.title, body: sd.body, action: sd.action, hasBar: sd.bar > 0,
+      bar: 'height:100%;width:' + sd.bar + '%;background:' + sd.tone + ';border-radius:99px',
+      actionStyle: 'font-family:var(--f-mono);font-size:10.5px;padding:9px 15px;min-height:38px;display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:var(--r-2);color:var(--txt-1)' };
+
+    const sig = cur
+      ? { chain: this.fmtLong(cur.fmt) + ' · ' + (cur.fmt === '24/192' ? '4 608 kbps' : cur.fmt === '24/96' ? '2 304 kbps' : '1 411 kbps'),
+          out: cur.fmt === '16/44.1' ? 'bit-perfect → 44.1 kHz out' : '→ resampled to 48 kHz by the browser mixer',
+          line: 'nyx.local · ' + this.fmtLong(cur.fmt) }
+      : { chain: 'no stream', out: 'output idle · 48 kHz', line: 'nyx.local · idle' };
+
+    return {
+      theme: s.theme, zero: 0,
+      is: { desktop: !mob, mobile: mob }, scr,
+      tab: { desktop: this.micro(!mob), mobile: this.micro(mob), dark: this.micro(!light), light: this.micro(light) },
+      setDesktop: () => this.setState({ vp: 'desktop' }), setMobile: () => this.setState({ vp: 'mobile' }),
+      setDark: () => this.setState({ theme: 'dark' }), setLight: () => this.setState({ theme: 'light' }),
+      openAmbient: () => this.setState({ ambient: true }), toggleCmd: () => this.setState(x => ({ cmd: !x.cmd })), toggleKeys: () => this.setState(x => ({ keys: !x.keys })),
+      goCrate: () => this.go('crate'), goQueue: () => this.setState(x => ({ qOpen: !x.qOpen })), goYear: () => this.go('year'),
+      wrapStyle: 'flex:1;min-height:0;display:flex;--wash:' + p.wash + ';--bar:' + p.bar,
+      frameOuter: mob ? 'flex:1;display:grid;place-items:center;background:var(--bg-1);padding:20px' : 'flex:1;display:flex;min-height:0',
+      frameInner: mob ? 'width:393px;height:820px;max-height:100%;display:flex;overflow:hidden;border-radius:40px;border:1px solid var(--line);background:var(--bg-0);box-shadow:0 30px 80px oklch(0.1 0.012 48/.5);position:relative' : 'flex:1;display:flex;min-height:0;position:relative',
+      railStyle: mob ? 'display:none' : 'flex:0 0 232px;display:flex;flex-direction:column;border-right:1px solid var(--line);background:var(--bg-1)',
+      washStyle: 'position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 70% at 15% 0%,' + p.wash + ' 0%,transparent 62%);opacity:' + (scr.album || scr.crate ? .95 : .4) + ';transition:background var(--dur-slow) var(--ease),opacity var(--dur-slow) var(--ease)',
+      scrollStyle: 'position:relative;flex:1;min-height:0;overflow-y:auto' + (mob ? ';padding-top:34px' : ''),
+      padStyle: 'padding:' + pad + ';max-width:1680px',
+      nav, tabs, libStat: { albums: this.lib.length, tracks: 641, size: '41.2 GB', status: 'connected · bit-perfect' },
+      home, grid, det, artists, art, genres, playlists, favs, search, crate, stats, year: { frames: yearFrames }, qv,
+      np: npv, lyr: { synced: lyricMode === 'synced', plain: lyricMode === 'plain', none: lyricMode === 'none', lines,
+        measure: 'width:100%;max-width:' + (mob ? '340px' : '760px') + ';flex:0 1 auto' },
+      amb, cmd, keys, settings, sys, sig,
+      soon: { pill: 'font-family:var(--f-mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;padding:3px 9px;border-radius:99px;border:1px dashed var(--line);color:var(--txt-3)' }
+    };
+  }
+
+  moveQ(i, dir) { const q = this.state.queue.slice(); const j = i + dir; if (j <= this.state.qi || j >= q.length) return; [q[i], q[j]] = [q[j], q[i]]; this.setState({ queue: q }); }
+  removeQ(i) { const q = this.state.queue.slice(); q.splice(i, 1); this.setState({ queue: q }); }
+}
+</script>
+</body>
+</html>
