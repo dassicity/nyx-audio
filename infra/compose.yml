@@ -1,0 +1,88 @@
+# Nyx Audio — Raspberry Pi 5 stack
+#
+#   docker compose up -d
+#
+# Caddy is the ONLY published entry point. Navidrome is reachable solely on the
+# internal network, so the Subsonic API and the client always share one origin
+# and CORS never enters the picture.
+#
+# Services marked (v1) do not exist yet. They are written out so the file grows
+# into the architecture in docs/tech-stack.md instead of being rewritten.
+
+name: nyx
+
+services:
+  # ── Library server: scanning, tags, cover art, transcoding, audio bytes ──
+  navidrome:
+    image: deluan/navidrome:latest   # pin to a digest after the first good boot
+    container_name: nyx-navidrome
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      ND_MUSICFOLDER: /music
+      ND_DATAFOLDER: /data
+      # The library changes rarely — a daily sweep plus the filesystem watcher
+      # is plenty. Manual rescans are available in the Navidrome UI.
+      ND_SCANSCHEDULE: "@every 24h"
+      ND_LOGLEVEL: info
+      ND_SESSIONTIMEOUT: 24h
+      # Read ReplayGain tags written by beets rather than recomputing them.
+      ND_ENABLETRANSCODINGCONFIG: "false"
+      TZ: "${TZ:-Asia/Kolkata}"
+    volumes:
+      # READ-ONLY, deliberately. A bug must never be able to delete the library.
+      - "${MUSIC_DIR:-/srv/music}:/music:ro"
+      - navidrome-data:/data
+    networks: [nyx]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4533/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # ── Single entry point: static client, API routing, TLS ──
+  caddy:
+    image: caddy:2-alpine
+    container_name: nyx-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data          # certificates and ACME state — do not delete
+      - caddy-config:/config
+      # Tailscale certs, once you enable the HTTPS block in the Caddyfile:
+      # - ./caddy/certs:/certs:ro
+      # The built frontend, once nyx-web exists:
+      # - ../apps/web/dist:/srv/nyx-web:ro
+    depends_on:
+      navidrome:
+        condition: service_healthy
+    networks: [nyx]
+
+  # ── (v1) Play history, enrichment cache, crate selection, statistics ──
+  # Never touches audio bytes — that is what keeps the language choice free.
+  # nyx-api:
+  #   image: ghcr.io/OWNER/nyx-api:latest
+  #   container_name: nyx-api
+  #   restart: unless-stopped
+  #   user: "${PUID:-1000}:${PGID:-1000}"
+  #   environment:
+  #     NYX_DB: /data/nyx.db
+  #     NAVIDROME_URL: http://navidrome:4533
+  #     TZ: "${TZ:-Asia/Kolkata}"
+  #   volumes:
+  #     - nyx-api-data:/data
+  #   networks: [nyx]
+
+volumes:
+  navidrome-data:
+  caddy-data:
+  caddy-config:
+  # nyx-api-data:
+
+networks:
+  nyx:
+    driver: bridge

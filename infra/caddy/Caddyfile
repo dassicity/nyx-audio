@@ -1,0 +1,98 @@
+# Nyx Audio — Caddy
+#
+# One origin for everything: the client, the Subsonic API and the audio stream
+# all come from the same host, so there is no CORS and no mixed-content problem.
+#
+# Routing (docs/tech-stack.md, D9):
+#   /rest/*  → navidrome   Subsonic / OpenSubsonic API and audio bytes
+#   /api/*   → nyx-api     play history, stats, crate, enrichment  (v1)
+#   /        → nyx-web     the built client                        (v1)
+#
+# Until nyx-web exists, / falls through to Navidrome's own UI — which is what
+# you use to confirm the first scan found everything.
+
+{
+	admin off
+	# Uncomment while debugging a route:
+	# debug
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+}
+
+# ── LAN over plain HTTP ──────────────────────────────────────────────────
+# Correct for a first deploy on a trusted home network. It is NOT enough for
+# v3: installable apps and offline caching need a secure context, which is
+# what the Tailscale block below is for.
+# `:80` answers on ANY hostname — nyx.local, nil.local, the bare IP, whatever
+# the Pi is called this week. Host matching buys nothing with one site on a
+# trusted LAN, and a hostname mismatch otherwise 404s with no obvious cause.
+:80 {
+	import common
+
+	# Subsonic / OpenSubsonic. Also carries the audio stream, so keep the
+	# response unbuffered and allow long transfers for 20-minute qawwali.
+	handle /rest/* {
+		reverse_proxy navidrome:4533 {
+			flush_interval -1
+		}
+	}
+
+	# (v1) handle /api/* {
+	#	reverse_proxy nyx-api:8000
+	# }
+
+	# (v1) The built client. Swap this in and drop the fallback below.
+	# handle {
+	#	root * /srv/nyx-web
+	#	try_files {path} /index.html
+	#	file_server
+	# }
+
+	# Interim front door: Navidrome's own UI.
+	handle {
+		reverse_proxy navidrome:4533 {
+			flush_interval -1
+		}
+	}
+}
+
+# ── Tailscale HTTPS ──────────────────────────────────────────────────────
+# Enable once Tailscale is running on the Pi. Generate the pair with:
+#
+#   sudo tailscale cert nyx.<your-tailnet>.ts.net
+#   sudo mv nyx.<your-tailnet>.ts.net.{crt,key} infra/caddy/certs/
+#
+# then uncomment the certs volume in compose.yml and this block.
+#
+# https://nyx.<your-tailnet>.ts.net {
+#	import common
+#	tls /certs/nyx.<your-tailnet>.ts.net.crt /certs/nyx.<your-tailnet>.ts.net.key
+#
+#	# v1.5: the Web Audio ring buffer needs SharedArrayBuffer, which needs
+#	# cross-origin isolation. These are the headers, when that lands.
+#	# header {
+#	#	Cross-Origin-Opener-Policy   same-origin
+#	#	Cross-Origin-Embedder-Policy require-corp
+#	# }
+#
+#	handle /rest/* {
+#		reverse_proxy navidrome:4533 {
+#			flush_interval -1
+#		}
+#	}
+#	handle /api/* {
+#		reverse_proxy nyx-api:8000
+#	}
+#	handle {
+#		root * /srv/nyx-web
+#		try_files {path} /index.html
+#		file_server
+#	}
+# }
