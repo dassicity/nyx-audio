@@ -32,14 +32,17 @@ services:
     volumes:
       # READ-ONLY, deliberately. A bug must never be able to delete the library.
       - "${MUSIC_DIR:-/srv/music}:/music:ro"
-      - navidrome-data:/data
+      # A bind mount, NOT a named volume. Docker creates a named volume's
+      # mountpoint as root:root, so a container running as UID 1000 cannot
+      # write its database there — Navidrome fails with "database could not be
+      # opened". A host directory you chown yourself has no such problem, and
+      # it is easier to back up and inspect.
+      - "${DATA_DIR:-/srv/nyx}/navidrome:/data"
     networks: [nyx]
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:4533/ping"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 40s
+    # No custom healthcheck. The upstream image may not contain wget or curl,
+    # and a healthcheck that cannot run reports "unhealthy" forever — which,
+    # combined with a `service_healthy` gate below, takes down the whole stack
+    # while Navidrome is in fact running fine. Not worth the failure mode.
 
   # ── Single entry point: static client, API routing, TLS ──
   caddy:
@@ -57,9 +60,10 @@ services:
       # - ./caddy/certs:/certs:ro
       # The built frontend, once nyx-web exists:
       # - ../apps/web/dist:/srv/nyx-web:ro
+    # Start-order only. Caddy 502s for the few seconds before Navidrome is
+    # listening, then works — far better than refusing to start at all.
     depends_on:
-      navidrome:
-        condition: service_healthy
+      - navidrome
     networks: [nyx]
 
   # ── (v1) Play history, enrichment cache, crate selection, statistics ──
@@ -74,14 +78,13 @@ services:
   #     NAVIDROME_URL: http://navidrome:4533
   #     TZ: "${TZ:-Asia/Kolkata}"
   #   volumes:
-  #     - nyx-api-data:/data
+  #     - "${DATA_DIR:-/srv/nyx}/api:/data"
   #   networks: [nyx]
 
 volumes:
-  navidrome-data:
+  # Caddy runs as root, so named volumes are fine here.
   caddy-data:
   caddy-config:
-  # nyx-api-data:
 
 networks:
   nyx:
