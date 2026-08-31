@@ -60,8 +60,8 @@ services:
       - caddy-config:/config
       # Tailscale certificates. Gitignored — the key must never be committed.
       - ./caddy/certs:/certs:ro
-      # The built frontend, once nyx-web exists:
-      # - ../apps/web/dist:/srv/nyx-web:ro
+      # The built client, rsynced from the laptop by ./deploy-web.sh.
+      - "${WEB_DIR:-/srv/nyx/web}:/srv/nyx-web:ro"
     # Start-order only. Caddy 502s for the few seconds before Navidrome is
     # listening, then works — far better than refusing to start at all.
     depends_on:

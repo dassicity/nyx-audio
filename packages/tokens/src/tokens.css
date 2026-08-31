@@ -1,0 +1,179 @@
+/* ==========================================================================
+   Nyx Audio — design tokens
+   One system for web, desktop (same web app) and the later Flutter mobile app.
+   Every token below has a Flutter equivalent noted in [F: …] so nothing here
+   depends on a CSS trick that cannot survive the translation.
+   ========================================================================== */
+
+:root {
+  /* --- TYPE FAMILIES -----------------------------------------------------
+     [F: ThemeData.textTheme + GoogleFonts.literata()/alegreyaSans()/ibmPlexMono()
+         Bundle the .ttf in pubspec assets — the Pi may be offline.]           */
+  --nyx-font-display: 'Literata', Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  --nyx-font-body:    'Alegreya Sans', 'Gill Sans', 'Trebuchet MS', Helvetica, sans-serif;
+  --nyx-font-mono:    'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* --- NEUTRALS (night, primary theme) ----------------------------------
+     Hue 48-52 (warm amber-brown) at low chroma: lamplight on a shelf, not a cold
+     grey. Text runs slightly warmer still (hue 62-76) so it reads as ink, not glare.
+     [F: Color(0xFF…) constants, or Color.from(oklch) via a small helper.
+         Keep the same 4-step surface ladder + 3-step text ladder.]            */
+  --nyx-bg-0: oklch(0.168 0.022 52);   /* app background            [F: scaffoldBackgroundColor] */
+  --nyx-bg-1: oklch(0.212 0.026 48);   /* rails, player bar, cards  [F: colorScheme.surface] */
+  --nyx-bg-2: oklch(0.256 0.030 46);   /* hover / selected          [F: surfaceContainerHigh] */
+  --nyx-bg-3: oklch(0.318 0.034 44);   /* track grooves, scrollbar  [F: surfaceContainerHighest] */
+  --nyx-line:      oklch(0.360 0.034 044); /* 1px structural rule    [F: DividerThemeData.color] */
+  --nyx-line-soft: oklch(0.278 0.026 046); /* list separators */
+  --nyx-txt-1: oklch(0.965 0.022 080);  /* primary text  ≥ 13:1 on bg-0  [F: onSurface] */
+  --nyx-txt-2: oklch(0.800 0.030 070);  /* secondary     ≥  7:1         [F: onSurfaceVariant] */
+  --nyx-txt-3: oklch(0.650 0.034 062);  /* mono readouts ≥ 4.6:1        [F: outline] */
+
+  /* --- FIXED ACCENTS ----------------------------------------------------
+     Same L and C, hue varies. NEVER derived from artwork: these must mean
+     the same thing on every record.  [F: colorScheme.primary/error + custom
+     NyxSemantic extension on ThemeExtension]                                */
+  --nyx-signal:   oklch(0.780 0.098 068); /* focus ring, interactive, chart ink */
+  --nyx-positive: oklch(0.760 0.095 148);
+  --nyx-warning:  oklch(0.800 0.105 088);
+  --nyx-negative: oklch(0.690 0.130 028);
+
+  /* --- DYNAMIC PALETTE (from cover art) --------------------------------
+     Extraction: 5 swatches from a 64×64 downsample (dominant, secondary,
+     dark-muted, light-muted, most-vivid), k-means in OKLab.
+     Then every swatch is REWRITTEN, not used raw:
+       · hue      = kept from the artwork
+       · chroma   = min(extracted C × strength, ceiling)  ceilings below
+       · lightness= PINNED to the rungs below, never taken from the artwork
+     Because L is pinned and text tokens are fixed, contrast is a property of
+     the system: AA holds for a black-and-white sleeve, a neon rave cover and
+     a beige ECM sleeve alike. Fallback when extraction fails or C < 0.01:
+     hue 58 (the warm neutral bias) — the UI simply looks like itself.
+     [F: PaletteGenerator → same clamp function → ThemeExtension<NyxArtPalette>
+         rebuilt on track change; identical maths, no CSS involved.]           */
+  --nyx-art-hue: 58;                     /* runtime; 58 is also the neutral fallback */
+  --nyx-art-c-surface: 0.09;             /* chroma ceiling, surfaces */
+  --nyx-art-c-accent:  0.13;             /* chroma ceiling, bar / glow / lyric */
+  --nyx-art-wash: oklch(0.300 0.090 var(--nyx-art-hue)); /* ambient bg wash   L pinned .30 */
+  --nyx-art-deep: oklch(0.185 0.050 var(--nyx-art-hue)); /* now-playing floor L pinned .185 */
+  --nyx-art-glow: oklch(0.460 0.130 var(--nyx-art-hue)); /* glow behind sleeve */
+  --nyx-art-bar:  oklch(0.760 0.130 var(--nyx-art-hue)); /* progress fill */
+  --nyx-art-lyric:oklch(0.920 0.060 var(--nyx-art-hue)); /* active lyric line */
+  /* ALLOWED: ambient wash, glow, progress fill, active lyric line, genre tiles,
+     crate card bleed, listening-year chapter grounds.
+     FORBIDDEN: body text, any icon, focus ring, semantic states, chart ink,
+     anything read under time pressure. */
+
+  /* --- TYPE SCALE (px; 1.25-ish, hand-tuned) ---------------------------
+     [F: TextTheme entries, one per line. Mono roles always
+         fontFeatures:[FontFeature.tabularFigures()].]                        */
+  --nyx-t-mono-xs: 9.5px;   /* eyebrow labels, letterSpacing .2em */
+  --nyx-t-mono-sm: 10.5px;  /* signal path, timecodes, counts */
+  --nyx-t-mono-md: 11.5px;  /* crate reason */
+  --nyx-t-body-sm: 11.5px;
+  --nyx-t-body-md: 14.5px;  /* default UI text — Alegreya Sans has a small
+                               x-height, so the body ladder sits ~1px larger
+                               than a grotesque would need */
+  --nyx-t-body-lg: 15.5px;  /* base font size — Alegreya Sans has a small
+                               x-height, so the ladder sits ~1px larger
+                               than a grotesque would need */
+  --nyx-t-disp-sm: 17px;
+  --nyx-t-disp-md: 22px;
+  --nyx-t-disp-lg: 34px;    /* screen titles */
+  --nyx-t-disp-xl: 46px;    /* album title */
+  --nyx-t-disp-2xl: 58px;   /* album title, short */
+  --nyx-t-lyric: 34px;          /* active lyric line, desktop (24px mobile) */
+  --nyx-t-lyric-inactive: 29px; /* neighbouring lines, desktop (21px mobile) */
+  --nyx-t-ambient: clamp(44px, 5.4vw, 84px); /* [F: LayoutBuilder ratio, not vw] */
+  --nyx-lh-tight: 1.06;  --nyx-lh-body: 1.5;  --nyx-lh-read: 1.7;
+  --nyx-ls-mono: 0.08em; --nyx-ls-eyebrow: 0.2em; --nyx-ls-display: -0.015em;
+
+  /* --- SPACING (4px base) ---  [F: const NyxSpace.x4 … double constants] */
+  --nyx-s-1: 4px;  --nyx-s-2: 8px;  --nyx-s-3: 12px; --nyx-s-4: 16px;
+  --nyx-s-5: 20px; --nyx-s-6: 26px; --nyx-s-7: 34px; --nyx-s-8: 44px;
+  --nyx-pad-screen-desktop: 34px 40px 44px;
+  --nyx-pad-screen-mobile: 20px 16px 26px;   /* + MediaQuery.padding.bottom [F: SafeArea] */
+
+  /* --- RADII --- deliberately small: records are not rounded.
+     [F: BorderRadius.circular(n)]                                          */
+  --nyx-r-sleeve: 2px;   /* artwork, always */
+  --nyx-r-1: 3px;        /* micro controls */
+  --nyx-r-2: 6px;        /* buttons, cards */
+  --nyx-r-3: 10px;       /* overlays, panels */
+  --nyx-r-pill: 999px;   /* chips, meters */
+
+  /* --- ELEVATION --- one shadow family, tinted with the neutral hue.
+     [F: BoxShadow(color:…, blurRadius:…, offset:…) — same three steps]      */
+  --nyx-e-1: 0 6px 18px oklch(0.12 0.012 48 / 0.35);
+  --nyx-e-2: 0 24px 60px oklch(0.12 0.012 48 / 0.50);
+  --nyx-e-3: 0 30px 90px oklch(0.10 0.012 48 / 0.60);
+
+  /* --- MOTION --- four moments only: palette/art crossfade, lyric advance,
+     mini-player expand, crate reveal. Everything else is instant.
+     [F: Duration(milliseconds:) + Curves.easeOutCubic ≈ this cubic-bezier;
+         respect MediaQuery.disableAnimations for reduced motion.]            */
+  --nyx-dur-fast: 120ms;   /* state changes */
+  --nyx-dur-mid: 260ms;    /* expand, flip */
+  --nyx-dur-slow: 620ms;   /* palette + artwork crossfade, lyric advance */
+  --nyx-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --nyx-drift: 90s;        /* ambient composition cycle (48s in OLED-safe) */
+
+  /* --- TOUCH / HIT --- [F: MaterialTapTargetSize / SizedBox 44] */
+  --nyx-hit-min: 44px;
+
+  /* --- GRID --- [F: SliverGridDelegateWithFixedCrossAxisCount] */
+  --nyx-cols-desktop-comfortable: 5;
+  --nyx-cols-desktop-dense: 7;
+  --nyx-cols-desktop-large: 4;
+  --nyx-cols-mobile: 2;
+  --nyx-gutter-desktop: 20px;
+  --nyx-gutter-mobile: 12px;
+  --nyx-rail-w: 232px;      /* collapsed: 64px, mono 2-letter codes */
+  --nyx-queue-w: 344px;     /* floating queue panel, right side, overlays content
+                               above the player bar; full-width on mobile
+                               [F: Drawer(width:) / Positioned overlay]        */
+}
+
+/* --- DAY THEME — designed, not inverted ---------------------------------
+   Warmer paper (hue 74-78, chroma 0.019-0.034) under warm brown-black ink
+   (hue 48-56): the light theme is a printed sleeve under an afternoon lamp,
+   not the night theme with the lightness flipped.
+   Art-derived L rungs move UP (wash .90, deep .955) so text stays dark.
+   [F: ThemeData.light() with the same ThemeExtension shape.]              */
+[data-theme="light"], .nyx-day {
+  --nyx-bg-0: oklch(0.968 0.019 78);
+  --nyx-bg-1: oklch(0.940 0.024 76);
+  --nyx-bg-2: oklch(0.905 0.029 74);
+  --nyx-bg-3: oklch(0.862 0.034 70);
+  --nyx-line:      oklch(0.838 0.032 68);
+  --nyx-line-soft: oklch(0.892 0.026 74);
+  --nyx-txt-1: oklch(0.245 0.026 48);
+  --nyx-txt-2: oklch(0.445 0.029 52);
+  --nyx-txt-3: oklch(0.578 0.031 56);
+  --nyx-signal:   oklch(0.520 0.110 58);
+  --nyx-positive: oklch(0.495 0.100 148);
+  --nyx-warning:  oklch(0.560 0.110 78);
+  --nyx-negative: oklch(0.520 0.150 28);
+  --nyx-art-wash: oklch(0.900 0.055 var(--nyx-art-hue));
+  --nyx-art-deep: oklch(0.955 0.030 var(--nyx-art-hue));
+  --nyx-art-glow: oklch(0.820 0.130 var(--nyx-art-hue));
+  --nyx-art-bar:  oklch(0.520 0.130 var(--nyx-art-hue));
+  --nyx-art-lyric:oklch(0.360 0.070 var(--nyx-art-hue));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --nyx-dur-fast: 1ms; --nyx-dur-mid: 1ms; --nyx-dur-slow: 1ms; --nyx-drift: 0s; }
+}
+
+/* --- FLUTTER TRANSLATION NOTES (what NOT to build on) -------------------
+   1. No backdrop-filter, no frosted panels — nothing here needs them.
+   2. vw/vh appear only in the ambient display; in Flutter use LayoutBuilder
+      ratios of the shortest side (the numbers are ratios, not pixels).
+   3. aspect-ratio:1 on sleeves → AspectRatio(aspectRatio: 1).
+   4. Gradient covers are geometry, not CSS: linear/radial/conic map 1:1 to
+      LinearGradient / RadialGradient / SweepGradient with the same stops.
+   5. text-wrap:pretty has no Flutter equivalent — long classical titles are
+      handled by the SIZE STEP-DOWN rule instead (title >60 chars → xl→lg,
+      >30 → 2xl→xl), which is pure logic and ports directly.
+   6. Marquee is banned. Player-bar titles ellipsize; the full title is always
+      reachable one tap away on Now Playing.
+   ----------------------------------------------------------------------- */

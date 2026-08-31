@@ -36,30 +36,36 @@
 :80 {
 	import common
 
-	# Subsonic / OpenSubsonic. Also carries the audio stream, so keep the
-	# response unbuffered and allow long transfers for 20-minute qawwali.
+	# Navidrome keeps its own UI at /app — useful for admin (users, scans,
+	# transcoding settings). Its API and auth endpoints live alongside it.
 	handle /rest/* {
 		reverse_proxy navidrome:4533 {
 			flush_interval -1
 		}
+	}
+	handle /auth/* {
+		reverse_proxy navidrome:4533
+	}
+	handle /app/* {
+		reverse_proxy navidrome:4533
+	}
+	handle /share/* {
+		reverse_proxy navidrome:4533
 	}
 
 	# (v1) handle /api/* {
 	#	reverse_proxy nyx-api:8000
 	# }
 
-	# (v1) The built client. Swap this in and drop the fallback below.
-	# handle {
-	#	root * /srv/nyx-web
-	#	try_files {path} /index.html
-	#	file_server
-	# }
-
-	# Interim front door: Navidrome's own UI.
+	# Everything else is the Nyx client: a static SPA built on the laptop and
+	# rsynced here. try_files sends unknown paths to index.html so client-side
+	# routes survive a refresh.
 	handle {
-		reverse_proxy navidrome:4533 {
-			flush_interval -1
-		}
+		root * /srv/nyx-web
+		try_files {path} /index.html
+		file_server
+		header /assets/* Cache-Control "public, max-age=31536000, immutable"
+		header /index.html Cache-Control "no-cache"
 	}
 }
 

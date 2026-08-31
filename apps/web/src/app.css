@@ -1,0 +1,43 @@
+@import '@nyx/tokens/tokens.css';
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--nyx-bg-0);
+  color: var(--nyx-txt-1);
+  font-family: var(--nyx-font-body);
+  font-size: var(--nyx-t-body-lg);
+  line-height: var(--nyx-lh-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+
+:focus-visible {
+  outline: 2px solid var(--nyx-signal);
+  outline-offset: 2px;
+}
+
+/* Digits must line up everywhere they are compared. */
+.mono {
+  font-family: var(--nyx-font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--nyx-ls-mono);
+}
+
+.eyebrow {
+  font-family: var(--nyx-font-mono);
+  font-size: var(--nyx-t-mono-xs);
+  letter-spacing: var(--nyx-ls-eyebrow);
+  text-transform: uppercase;
+  color: var(--nyx-txt-3);
+}
+
+.display { font-family: var(--nyx-font-display); letter-spacing: var(--nyx-ls-display); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}
