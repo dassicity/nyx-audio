@@ -37,7 +37,8 @@ info "host: ${NYX_USER}@${NYX_HOST}   target: ${WEB_DIR}"
 if ! ssh -o ConnectTimeout=6 -o BatchMode=yes "${NYX_USER}@${NYX_HOST}" true 2>/dev/null; then
   warn "cannot reach ${NYX_HOST} over ssh without a password prompt."
   info "DHCP moves LAN addresses and mDNS caches go stale — the tailnet name"
-  info "is stable. Try:  NYX_HOST=nyx.<your-tailnet>.ts.net $0"
+  info "is stable. Try:  NYX_HOST=nyx-ts $0"
+  info "(set up a key once with: ssh-copy-id -i ~/.ssh/nyx-pi.pub nil@nyx.local)"
   ask "Continue anyway (you may be prompted for a password)?" || die "Nothing changed."
 else
   good "ssh works"
@@ -64,8 +65,19 @@ fi
 
 # ── 3. Deploy ────────────────────────────────────────────────────────────
 step "3. Deploying"
-ssh "${NYX_USER}@${NYX_HOST}" "sudo mkdir -p '${WEB_DIR}' && sudo chown -R \$(id -u):\$(id -g) '${WEB_DIR}'" \
-  || die "Could not prepare ${WEB_DIR} on the Pi."
+# Normally nothing to do: the directory exists and you own it. Only the very
+# first deploy needs root, and `ssh -t` gives sudo the terminal it requires —
+# without a TTY it cannot prompt and fails with "a terminal is required".
+if ssh "${NYX_USER}@${NYX_HOST}" "test -w '${WEB_DIR}'" 2>/dev/null; then
+  have "${WEB_DIR} exists and is writable"
+else
+  info "${WEB_DIR} is missing or not writable — creating it needs sudo on the Pi."
+  ask "Create it now (you may be asked for your Pi password)?" || die "Nothing changed."
+  ssh -t "${NYX_USER}@${NYX_HOST}" \
+    "sudo mkdir -p '${WEB_DIR}' && sudo chown -R \$(id -u):\$(id -g) '${WEB_DIR}'" \
+    || die "Could not prepare ${WEB_DIR} on the Pi."
+  good "created ${WEB_DIR}"
+fi
 
 ask "rsync $DIST/ → ${NYX_HOST}:${WEB_DIR}/ (deletes files no longer in the build)?" \
   || die "Nothing changed."
