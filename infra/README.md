@@ -123,6 +123,44 @@ public CA will issue a certificate for a private IP.
 
 ---
 
+## 7. Deploy the client
+
+Everything runs on the Pi: Caddy serves the built client at `/` and proxies
+the API to Navidrome on the same origin. One origin means no CORS, and the
+client only ever calls relative paths.
+
+From your **laptop** (the Pi builds nothing — D9):
+
+```bash
+./deploy-web.sh
+```
+
+It builds, checks the bundle contains no hard-coded hostname, rsyncs `dist/`
+to `WEB_DIR` on the Pi, and verifies the served page is actually the Nyx
+client rather than Navidrome's own UI.
+
+If the Pi has moved on your LAN — DHCP reassigns addresses and mDNS caches go
+stale — point it at the stable tailnet name instead:
+
+```bash
+NYX_HOST=nyx.<your-tailnet>.ts.net ./deploy-web.sh
+```
+
+After deploying:
+
+| URL | What |
+|---|---|
+| `http://nyx.local/` | the Nyx client |
+| `http://nyx.local/app/` | Navidrome's own UI, for admin — users, scans, transcoding |
+| `https://nyx.<tailnet>.ts.net/` | the same, over TLS, from anywhere |
+
+Local development still runs Vite on your laptop against the Pi's API
+(`pnpm --filter @nyx/web dev`); copy `apps/web/.env.local.example` to
+`.env.local` and set `NYX_SERVER`. That proxy is development-only and is not
+part of the build.
+
+---
+
 ## Operating notes
 
 - **The music mount is read-only** (`/srv/music:/music:ro`). Deliberate: a bug
