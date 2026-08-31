@@ -54,10 +54,12 @@ services:
       - "443:443"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Per-machine generated config (Tailscale HTTPS). Gitignored.
+      - ./caddy/conf.d:/etc/caddy/conf.d:ro
       - caddy-data:/data          # certificates and ACME state — do not delete
       - caddy-config:/config
-      # Tailscale certs, once you enable the HTTPS block in the Caddyfile:
-      # - ./caddy/certs:/certs:ro
+      # Tailscale certificates. Gitignored — the key must never be committed.
+      - ./caddy/certs:/certs:ro
       # The built frontend, once nyx-web exists:
       # - ../apps/web/dist:/srv/nyx-web:ro
     # Start-order only. Caddy 502s for the few seconds before Navidrome is

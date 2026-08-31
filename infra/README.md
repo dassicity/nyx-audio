@@ -96,14 +96,32 @@ unfinished UI to listen to your own library.
 ## 6. Tailscale — do this in v1, not later
 
 ```bash
-curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up
-sudo tailscale cert "nyx.$(tailscale status --json | grep -o '[a-z0-9-]*\.ts\.net' | head -1)"
+./setup-tailscale.sh
 ```
 
-Move the pair into `caddy/certs/`, then uncomment the certs volume in
-`compose.yml` and the HTTPS block in `caddy/Caddyfile`. Retrofitting HTTPS after
-the client is built is worse than doing it now — v3's installable app and
-offline caching both require a secure context.
+Idempotent and re-runnable. It reports what it finds at each step, confirms
+before anything that needs a decision, installs Tailscale if absent, works out
+this machine's tailnet name, obtains the certificate, writes the Caddy site
+block, restarts the stack and verifies the result.
+
+One prerequisite it cannot do for you: **HTTPS must be enabled for your
+tailnet** (admin console → DNS → HTTPS Certificates). The script tells you so
+if the certificate request fails.
+
+Everything it produces is machine-specific and gitignored — `caddy/certs/` and
+`caddy/conf.d/tailscale.caddy`. A tailnet name identifies your network and has
+no place in a public repo, which is why the Caddyfile imports a generated
+fragment instead of naming a host. A machine without Tailscale matches no
+files in that glob, which Caddy treats as fine, and serves plain HTTP.
+
+Re-run the script to renew — Tailscale certificates last 90 days, and it skips
+the work unless expiry is within three weeks.
+
+Do this before building the client, not after. It is not about remote access:
+v3's installable app and offline caching both require a secure context, and no
+public CA will issue a certificate for a private IP.
+
+---
 
 ## Operating notes
 

@@ -64,35 +64,11 @@
 }
 
 # ── Tailscale HTTPS ──────────────────────────────────────────────────────
-# Enable once Tailscale is running on the Pi. Generate the pair with:
+# Generated per-machine by ./setup-tailscale.sh, which writes
+# caddy/conf.d/tailscale.caddy with that host's own tailnet name. That file is
+# gitignored — a tailnet name identifies your network and does not belong in a
+# public repo.
 #
-#   sudo tailscale cert nyx.<your-tailnet>.ts.net
-#   sudo mv nyx.<your-tailnet>.ts.net.{crt,key} infra/caddy/certs/
-#
-# then uncomment the certs volume in compose.yml and this block.
-#
-# https://nyx.<your-tailnet>.ts.net {
-#	import common
-#	tls /certs/nyx.<your-tailnet>.ts.net.crt /certs/nyx.<your-tailnet>.ts.net.key
-#
-#	# v1.5: the Web Audio ring buffer needs SharedArrayBuffer, which needs
-#	# cross-origin isolation. These are the headers, when that lands.
-#	# header {
-#	#	Cross-Origin-Opener-Policy   same-origin
-#	#	Cross-Origin-Embedder-Policy require-corp
-#	# }
-#
-#	handle /rest/* {
-#		reverse_proxy navidrome:4533 {
-#			flush_interval -1
-#		}
-#	}
-#	handle /api/* {
-#		reverse_proxy nyx-api:8000
-#	}
-#	handle {
-#		root * /srv/nyx-web
-#		try_files {path} /index.html
-#		file_server
-#	}
-# }
+# A glob that matches nothing is not an error in Caddy, so a machine without
+# Tailscale simply serves HTTP from the :80 block above and carries on.
+import /etc/caddy/conf.d/*.caddy

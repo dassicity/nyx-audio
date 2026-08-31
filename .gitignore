@@ -31,3 +31,11 @@ __pycache__/
 nyx-staging/
 docs/
 design_handoff_nyx_audio/
+
+# ── TLS material: never in git ───────────────────────────────
+infra/caddy/certs/
+infra/caddy/conf.d/*.caddy
+!infra/caddy/conf.d/*.caddy.example
+*.key
+*.crt
+*.pem
