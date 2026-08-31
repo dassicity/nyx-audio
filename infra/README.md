@@ -125,39 +125,46 @@ public CA will issue a certificate for a private IP.
 
 ## 7. Deploy the client
 
-Everything runs on the Pi: Caddy serves the built client at `/` and proxies
-the API to Navidrome on the same origin. One origin means no CORS, and the
-client only ever calls relative paths.
+Everything runs on the server: Caddy serves the built client at `/` and
+proxies the API to Navidrome on the same origin. One origin means no CORS, and
+the client only ever calls relative paths — so the same bundle works over LAN
+HTTP and over TLS without a rebuild.
 
-From your **laptop** (the Pi builds nothing — D9):
+From your **workstation** (the server builds nothing — D9):
 
 ```bash
 ./deploy-web.sh
 ```
 
-It builds, checks the bundle contains no hard-coded hostname, rsyncs `dist/`
-to `WEB_DIR` on the Pi, and verifies the served page is actually the Nyx
-client rather than Navidrome's own UI.
+On first run it asks for the host, login and target directory, offers to save
+them to `infra/.deploy.env` (gitignored), and offers to generate and install
+an ssh key so nothing prompts for a password again. After that it is one
+command with no interaction beyond confirming the rsync.
 
-If the Pi has moved on your LAN — DHCP reassigns addresses and mDNS caches go
-stale — point it at the stable tailnet name instead:
+Settings resolve as environment variables → `.deploy.env` → ask. So a one-off
+deploy to a different machine needs no config file:
 
 ```bash
-NYX_HOST=nyx.<your-tailnet>.ts.net ./deploy-web.sh
+NYX_HOST=192.168.1.42 NYX_USER=pi ./deploy-web.sh
 ```
+
+`--reconfigure` re-asks everything. `--yes` skips all prompts, for CI or a
+`make deploy`.
 
 After deploying:
 
 | URL | What |
 |---|---|
-| `http://nyx.local/` | the Nyx client |
-| `http://nyx.local/app/` | Navidrome's own UI, for admin — users, scans, transcoding |
-| `https://nyx.<tailnet>.ts.net/` | the same, over TLS, from anywhere |
+| `/` | the Nyx client |
+| `/app/` | Navidrome's own UI, for admin — users, scans, transcoding |
+| `/rest/` | the OpenSubsonic API |
 
-Local development still runs Vite on your laptop against the Pi's API
-(`pnpm --filter @nyx/web dev`); copy `apps/web/.env.local.example` to
-`.env.local` and set `NYX_SERVER`. That proxy is development-only and is not
-part of the build.
+Local development still runs Vite on your workstation against the server's
+API (`pnpm --filter @nyx/web dev`); copy `apps/web/.env.local.example` to
+`.env.local` and set `NYX_SERVER`. That proxy is development-only and never
+reaches the build — `deploy-web.sh` checks the bundle for a hard-coded host
+before deploying, because that failure would work locally and break in
+production.
 
 ---
 
