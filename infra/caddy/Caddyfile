@@ -53,9 +53,9 @@
 		reverse_proxy navidrome:4533
 	}
 
-	# (v1) handle /api/* {
-	#	reverse_proxy nyx-api:8000
-	# }
+	handle /api/* {
+		reverse_proxy nyx-api:8000
+	}
 
 	# Everything else is the Nyx client: a static SPA built on the laptop and
 	# rsynced here. try_files sends unknown paths to index.html so client-side

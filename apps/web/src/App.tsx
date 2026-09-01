@@ -18,6 +18,7 @@ import { Settings } from './screens/Settings.js'
 import { Today } from './screens/Today.js'
 import { Favourites } from './screens/Favourites.js'
 import { Playlists } from './screens/Playlists.js'
+import { Stats } from './screens/Stats.js'
 import { usePlayer } from './player.js'
 
 export function App() {
@@ -48,9 +49,7 @@ export function App() {
             <Route path="/playlists" element={<Playlists />} />
             <Route path="/favourites" element={<Favourites />} />
             <Route path="/crate" element={<Crate />} />
-            <Route path="/stats" element={
-              <Planned title="Statistics" version="stats · needs nyx-api"
-                blurb="Listening clock, format breakdown, top artists. Needs the play-event log, which lives in nyx-api." />} />
+            <Route path="/stats" element={<Stats />} />
             <Route path="/year" element={
               <Planned title="Listening year" version="year · needs nyx-api"
                 blurb="An editorial report written from your own history. Not for posting anywhere." />} />

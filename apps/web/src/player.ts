@@ -10,6 +10,7 @@ import { NyxPlayer } from '@nyx/player'
 import type { PlayerState, Track } from '@nyx/player'
 import type { SubsonicClient } from './api/subsonic.js'
 import type { SubsonicSong } from './api/types.js'
+import { recordPlay } from './api/nyx.js'
 
 /** OpenSubsonic song → the engine's Track. ReplayGain comes straight from
  *  the tags beets wrote at import. */
@@ -35,6 +36,10 @@ const SCROBBLE_AFTER_SECONDS = 240 // long-form: four minutes is commitment enou
 
 interface PlayerStore extends PlayerState {
   engine: NyxPlayer | null
+  /** Subsonic rows for whatever is queued, keyed by id — the engine's Track
+   *  omits format metadata on purpose, and the play log wants it. */
+  sources: Record<string, SubsonicSong>
+  sourceOf: (id: string) => SubsonicSong | undefined
   attach: (client: SubsonicClient) => NyxPlayer
   playAlbum: (songs: SubsonicSong[], startIndex?: number) => void
 }
@@ -47,6 +52,8 @@ const EMPTY: PlayerState = {
 export const usePlayer = create<PlayerStore>((set, get) => ({
   ...EMPTY,
   engine: null,
+  sources: {},
+  sourceOf: (id) => get().sources[id],
 
   attach(client) {
     const existing = get().engine
@@ -86,6 +93,28 @@ export const usePlayer = create<PlayerStore>((set, get) => ({
       if (s.position < threshold) return
 
       scrobbled.add(track.id)
+
+      // Two destinations, deliberately. Navidrome keeps a counter for its own
+      // UI; nyx-api keeps the event, which is the only thing that can answer
+      // "when". The offset travels with it so the listening clock reads in
+      // local hours rather than UTC.
+      const source = get().sourceOf(track.id)
+      recordPlay({
+        track_id: track.id,
+        album_id: source?.albumId,
+        title: track.title,
+        artist: track.artist,
+        album: track.album,
+        duration: track.duration,
+        format: source?.suffix,
+        bit_depth: source?.bitDepth,
+        sample_rate: source?.samplingRate,
+        output_sample_rate: s.outputSampleRate || undefined,
+        path: s.path ?? undefined,
+        played_at: new Date().toISOString(),
+        tz_offset_minutes: -new Date().getTimezoneOffset(),
+      })
+
       void client.scrobble(track.id, true).catch(() => {
         // A failed scrobble must never interrupt playback. Allow a retry
         // if the track comes round again.
@@ -99,6 +128,7 @@ export const usePlayer = create<PlayerStore>((set, get) => ({
   playAlbum(songs, startIndex = 0) {
     const engine = get().engine
     if (!engine) return
+    set({ sources: Object.fromEntries(songs.map((s) => [s.id, s])) })
     void engine.load(songs.map(toTrack), startIndex)
   },
 }))

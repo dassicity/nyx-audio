@@ -66,22 +66,29 @@ services:
     # listening, then works — far better than refusing to start at all.
     depends_on:
       - navidrome
+      - nyx-api
     networks: [nyx]
 
-  # ── (v1) Play history, enrichment cache, crate selection, statistics ──
-  # Never touches audio bytes — that is what keeps the language choice free.
-  # nyx-api:
-  #   image: ghcr.io/OWNER/nyx-api:latest
-  #   container_name: nyx-api
-  #   restart: unless-stopped
-  #   user: "${PUID:-1000}:${PGID:-1000}"
-  #   environment:
-  #     NYX_DB: /data/nyx.db
-  #     NAVIDROME_URL: http://navidrome:4533
-  #     TZ: "${TZ:-Asia/Kolkata}"
-  #   volumes:
-  #     - "${DATA_DIR:-/srv/nyx}/api:/data"
-  #   networks: [nyx]
+  # ── Play history, statistics, enrichment cache ──
+  # Never touches audio bytes: streams go from the browser through Caddy to
+  # Navidrome directly. That rule is what keeps this service's language
+  # choice a matter of ecosystem rather than performance.
+  nyx-api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    image: nyx-api:local
+    container_name: nyx-api
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      NYX_DB: /data/nyx.db
+      TZ: "${TZ:-Asia/Kolkata}"
+    volumes:
+      # Bind mount for the same reason as Navidrome's: a named volume is
+      # created root-owned and this container runs as UID 1000.
+      - "${DATA_DIR:-/srv/nyx}/api:/data"
+    networks: [nyx]
 
 volumes:
   # Caddy runs as root, so named volumes are fine here.
