@@ -12,7 +12,7 @@
 import { md5, makeSalt } from './md5.js'
 import { SubsonicError } from './types.js'
 import type {
-  ScanStatus, SubsonicAlbum, SubsonicArtist, SubsonicSong,
+  ScanStatus, SubsonicAlbum, SubsonicArtist, SubsonicPlaylist, SubsonicSong,
 } from './types.js'
 
 const CLIENT = 'nyx'
@@ -117,6 +117,29 @@ export class SubsonicClient {
       songs: r.searchResult3?.song ?? [],
       artists: r.searchResult3?.artist ?? [],
     }
+  }
+
+  async getStarred(): Promise<{ albums: SubsonicAlbum[]; songs: SubsonicSong[] }> {
+    const r = await this.#get<{
+      starred2?: { album?: SubsonicAlbum[]; song?: SubsonicSong[] }
+    }>('getStarred2.view')
+    return { albums: r.starred2?.album ?? [], songs: r.starred2?.song ?? [] }
+  }
+
+  async star(albumId: string, starred: boolean): Promise<void> {
+    await this.#get(starred ? 'star.view' : 'unstar.view', { albumId })
+  }
+
+  async getArtist(id: string): Promise<SubsonicArtist & { album: SubsonicAlbum[] }> {
+    const r = await this.#get<{ artist: SubsonicArtist & { album?: SubsonicAlbum[] } }>(
+      'getArtist.view', { id })
+    return { ...r.artist, album: r.artist.album ?? [] }
+  }
+
+  async getPlaylists(): Promise<SubsonicPlaylist[]> {
+    const r = await this.#get<{ playlists?: { playlist?: SubsonicPlaylist[] } }>(
+      'getPlaylists.view')
+    return r.playlists?.playlist ?? []
   }
 
   /** Cover art URL. `size` omitted returns the original. */

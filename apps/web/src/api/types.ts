@@ -12,6 +12,11 @@ export interface SubsonicAlbum {
   genre?: string
   created?: string
   playCount?: number
+  /** OpenSubsonic: ISO timestamp of the most recent play. Navidrome sets it;
+   *  older Subsonic servers do not, which crate mode handles. */
+  played?: string
+  /** ISO timestamp when starred, or absent. */
+  starred?: string
 }
 
 export interface SubsonicSong {
@@ -66,3 +71,12 @@ export class SubsonicError extends Error {
 /** Subsonic error codes worth distinguishing in the UI. */
 export const SUBSONIC_WRONG_CREDENTIALS = 40
 export const SUBSONIC_REQUIRES_UPGRADE = 30
+
+export interface SubsonicPlaylist {
+  id: string
+  name: string
+  songCount: number
+  duration: number
+  coverArt?: string
+  comment?: string
+}

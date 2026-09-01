@@ -68,6 +68,7 @@ export class NyxPlayer {
 
   // stream path
   #el: HTMLAudioElement | null = null
+  #analyser: AnalyserNode | null = null
 
   #abort: AbortController | null = null
   #ticker: ReturnType<typeof setInterval> | null = null
@@ -82,6 +83,27 @@ export class NyxPlayer {
     this.#listeners.add(fn)
     fn(this.#state)
     return () => { this.#listeners.delete(fn) }
+  }
+
+  /**
+   * A real analyser over the output, for visualisation.
+   *
+   * Created on demand: an FFT node costs nothing when nobody is reading it,
+   * but there is no reason to build one for a session that never opens the
+   * ambient display. Returns null before playback has started.
+   */
+  analyser(): AnalyserNode | null {
+    if (this.#analyser) return this.#analyser
+    const ctx = this.#ctx
+    if (!ctx || !this.#gainNode) return null
+
+    const node = ctx.createAnalyser()
+    node.fftSize = 1024
+    // Slower than the default, so bars settle rather than jitter.
+    node.smoothingTimeConstant = 0.82
+    this.#gainNode.connect(node)
+    this.#analyser = node
+    return node
   }
 
   setGainSettings(s: Partial<GainSettings>): void {
@@ -128,6 +150,62 @@ export class NyxPlayer {
     await this.#start(this.#state.index - 1)
   }
 
+  /**
+   * Move a queue item. Playback is untouched unless the currently-playing
+   * item moves, in which case only the index is corrected — the audio source
+   * keeps running, which is the whole point.
+   */
+  reorder(from: number, to: number): void {
+    const queue = [...this.#state.queue]
+    if (from < 0 || from >= queue.length || to < 0 || to >= queue.length) return
+    const [moved] = queue.splice(from, 1)
+    if (!moved) return
+    queue.splice(to, 0, moved)
+
+    let index = this.#state.index
+    if (from === index) index = to
+    else if (from < index && to >= index) index--
+    else if (from > index && to <= index) index++
+
+    this.#patch({ queue, index })
+    // A scheduled successor may no longer be the right track.
+    this.#discardScheduled()
+  }
+
+  /** Remove an item. Removing what is playing advances to the next track. */
+  remove(at: number): void {
+    const queue = [...this.#state.queue]
+    if (at < 0 || at >= queue.length) return
+    queue.splice(at, 1)
+
+    if (at === this.#state.index) {
+      this.#patch({ queue })
+      if (queue.length === 0) { this.#teardownSources(); this.#patch({ index: -1, status: 'idle' }) }
+      else void this.#start(Math.min(at, queue.length - 1))
+      return
+    }
+
+    const index = at < this.#state.index ? this.#state.index - 1 : this.#state.index
+    this.#patch({ queue, index })
+    this.#discardScheduled()
+  }
+
+  clear(): void {
+    this.#teardownSources()
+    this.#stopTicker()
+    this.#patch({ queue: [], index: -1, status: 'idle', position: 0, duration: 0 })
+  }
+
+  /** Drop a pre-scheduled successor after the queue changed underneath it. */
+  #discardScheduled(): void {
+    if (!this.#nextSource) return
+    this.#nextSource.onended = null
+    try { this.#nextSource.stop() } catch { /* not started */ }
+    this.#nextSource.disconnect()
+    this.#nextSource = null
+    this.#nextBuffer = null
+  }
+
   async seek(seconds: number): Promise<void> {
     const clamped = Math.max(0, Math.min(seconds, this.#state.duration))
     if (this.#state.path === 'stream') {
@@ -143,6 +221,8 @@ export class NyxPlayer {
     this.#abort?.abort()
     this.#teardownSources()
     this.#el?.remove()
+    this.#analyser?.disconnect()
+    this.#analyser = null
     void this.#ctx?.close()
     this.#ctx = null
     this.#listeners.clear()

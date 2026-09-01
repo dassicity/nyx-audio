@@ -2,6 +2,24 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* One of only four motion moments in the product: the palette crossfade on
+   track change. Registering the properties lets the browser interpolate them
+   rather than snapping at the halfway point. */
+@property --nyx-art-wash  { syntax: '<color>'; inherits: true; initial-value: oklch(0.300 0 58); }
+@property --nyx-art-deep  { syntax: '<color>'; inherits: true; initial-value: oklch(0.185 0 58); }
+@property --nyx-art-glow  { syntax: '<color>'; inherits: true; initial-value: oklch(0.460 0 58); }
+@property --nyx-art-bar   { syntax: '<color>'; inherits: true; initial-value: oklch(0.760 0 58); }
+@property --nyx-art-lyric { syntax: '<color>'; inherits: true; initial-value: oklch(0.920 0 58); }
+
+:root {
+  transition:
+    --nyx-art-wash var(--nyx-dur-slow) var(--nyx-ease),
+    --nyx-art-deep var(--nyx-dur-slow) var(--nyx-ease),
+    --nyx-art-glow var(--nyx-dur-slow) var(--nyx-ease),
+    --nyx-art-bar var(--nyx-dur-slow) var(--nyx-ease),
+    --nyx-art-lyric var(--nyx-dur-slow) var(--nyx-ease);
+}
+
 html, body, #root { height: 100%; }
 
 body {
@@ -40,4 +58,21 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}
+
+/* The crate card reveal — one of the four motion moments. */
+@keyframes nyx-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Ambient drift. Nothing bright stays static in OLED-safe mode. */
+@keyframes nyx-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(3%, -2%) scale(1.06); }
+  66%      { transform: translate(-2%, 3%) scale(1.03); }
+}
+@keyframes nyx-drift-stage {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(-1.5%, 1.5%); }
 }

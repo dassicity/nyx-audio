@@ -1,9 +1,11 @@
 import { usePlayer } from '../player.js'
-import { duration, outputPath } from '../format.js'
+import { duration, outputPath, px } from '../format.js'
 
 /** Grid, not flex (the handoff is explicit): flex negotiation crushes a
  *  column at narrow widths, the grid floors prevent it. */
-export function PlayerBar() {
+export function PlayerBar(
+  { onExpand, onToggleQueue }: { onExpand: () => void; onToggleQueue: () => void },
+) {
   const { queue, index, status, position, duration: dur, path, gain, outputSampleRate, engine } = usePlayer()
   const track = queue[index]
   if (!track) return null
@@ -19,16 +21,17 @@ export function PlayerBar() {
       gap: 'var(--nyx-s-5)', padding: '0 18px', alignItems: 'center',
       overflow: 'hidden',
     }}>
-      {/* left — what is playing */}
-      <div style={{ minWidth: 0 }}>
+      {/* left — what is playing. The whole cell expands Now Playing. */}
+      <button onClick={onExpand} aria-label="Open now playing"
+        style={{ minWidth: 0, textAlign: 'left', display: 'block' }}>
         <div className="display" style={{
-          fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          fontSize: px(15), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>{track.title}</div>
         <div style={{
-          fontSize: 11.5, color: 'var(--nyx-txt-2)',
+          fontSize: px(11.5), color: 'var(--nyx-txt-2)',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>{track.artist}</div>
-      </div>
+      </button>
 
       {/* centre — transport and scrubber */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
@@ -41,7 +44,7 @@ export function PlayerBar() {
             style={{
               width: 40, height: 40, borderRadius: '50%',
               background: 'var(--nyx-txt-1)', color: 'var(--nyx-bg-0)',
-              display: 'grid', placeItems: 'center', fontSize: 15,
+              display: 'grid', placeItems: 'center', fontSize: px(15),
             }}
           >{status === 'playing' ? '❙❙' : '▶'}</button>
           <button aria-label="Next track" onClick={() => void engine?.next()}
@@ -77,19 +80,23 @@ export function PlayerBar() {
 
       {/* right — the signal path. Real numbers, and honest about resampling. */}
       <div className="mono" style={{
-        textAlign: 'right', fontSize: 10, color: 'var(--nyx-txt-2)', minWidth: 0,
+        textAlign: 'right', fontSize: px(10), color: 'var(--nyx-txt-2)', minWidth: 0,
       }}>
         <div>{path === 'buffer' ? 'gapless' : 'streaming'}{gain?.untagged ? ' · no replaygain' : ''}</div>
         <div style={{ color: 'var(--nyx-txt-3)' }}>
           {outputPath(44100, outputSampleRate)}
         </div>
+        <button onClick={onToggleQueue} className="mono" style={{
+          marginTop: 4, fontSize: px(10), letterSpacing: 'var(--nyx-ls-mono)',
+          textTransform: 'uppercase', color: 'var(--nyx-txt-2)',
+        }}>Queue {queue.length ? queue.length - index - 1 : 0}</button>
       </div>
     </div>
   )
 }
 
 const glyph: React.CSSProperties = {
-  fontSize: 16, color: 'var(--nyx-txt-2)',
+  fontSize: px(16), color: 'var(--nyx-txt-2)',
   minWidth: 'var(--nyx-hit-min)', minHeight: 'var(--nyx-hit-min)',
 }
 const time: React.CSSProperties = {

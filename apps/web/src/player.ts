@@ -29,6 +29,10 @@ export function toTrack(song: SubsonicSong): Track {
   return t
 }
 
+/** Report a play once it is genuinely a play, not a skip. */
+const SCROBBLE_AFTER_FRACTION = 0.5
+const SCROBBLE_AFTER_SECONDS = 240 // long-form: four minutes is commitment enough
+
 interface PlayerStore extends PlayerState {
   engine: NyxPlayer | null
   attach: (client: SubsonicClient) => NyxPlayer
@@ -66,7 +70,28 @@ export const usePlayer = create<PlayerStore>((set, get) => ({
       mediaSession: 'mediaSession' in navigator ? navigator.mediaSession : null,
     })
 
-    engine.subscribe((s) => set(s))
+    // Report plays to Navidrome. Without this, playCount never increments,
+    // which quietly breaks crate mode — everything looks unplayed forever.
+    // Nothing else writes this data today; nyx-api will own the richer log.
+    const scrobbled = new Set<string>()
+    engine.subscribe((s) => {
+      set(s)
+      const track = s.queue[s.index]
+      if (!track || s.status !== 'playing') return
+      if (scrobbled.has(track.id)) return
+
+      // A play is half the track, or four minutes — whichever comes first.
+      // A 26-minute movement should not need thirteen minutes to count.
+      const threshold = Math.min(track.duration * SCROBBLE_AFTER_FRACTION, SCROBBLE_AFTER_SECONDS)
+      if (s.position < threshold) return
+
+      scrobbled.add(track.id)
+      void client.scrobble(track.id, true).catch(() => {
+        // A failed scrobble must never interrupt playback. Allow a retry
+        // if the track comes round again.
+        scrobbled.delete(track.id)
+      })
+    })
     set({ engine })
     return engine
   },

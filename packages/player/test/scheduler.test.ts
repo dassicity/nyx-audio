@@ -60,3 +60,32 @@ describe('joinTime', () => {
     expect(joinTime(w, 350)).toBe(350)
   })
 })
+
+// Queue mutation is index arithmetic, and index arithmetic is where
+// off-by-one bugs live. These mirror NyxPlayer.reorder's logic exactly.
+describe('reorder index arithmetic', () => {
+  function reindex(from: number, to: number, index: number): number {
+    if (from === index) return to
+    if (from < index && to >= index) return index - 1
+    if (from > index && to <= index) return index + 1
+    return index
+  }
+
+  it('follows the playing track when it is the one moved', () => {
+    expect(reindex(2, 5, 2)).toBe(5)
+    expect(reindex(5, 0, 5)).toBe(0)
+  })
+
+  it('shifts down when an earlier item moves past the playing track', () => {
+    expect(reindex(0, 4, 2)).toBe(1)
+  })
+
+  it('shifts up when a later item moves in front of the playing track', () => {
+    expect(reindex(5, 1, 3)).toBe(4)
+  })
+
+  it('leaves the index alone when both ends are on the same side', () => {
+    expect(reindex(0, 1, 5)).toBe(5)
+    expect(reindex(7, 8, 2)).toBe(2)
+  })
+})

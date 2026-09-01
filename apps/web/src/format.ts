@@ -29,10 +29,21 @@ export function outputPath(sourceRate: number | undefined, contextRate: number):
     : `→ resampled to ${(contextRate / 1000).toFixed(1)} kHz by the browser mixer`
 }
 
+/**
+ * A font size that honours the user's text-size setting.
+ *
+ * Sizes live as numbers in the components (matching the design handoff's
+ * figures) and become scalable CSS here, so one setting moves everything and
+ * the ratios of the scale are preserved.
+ */
+export function px(size: number): string {
+  return `calc(${size}px * var(--nyx-text-scale))`
+}
+
 /** Album titles must step down by length rather than truncate or marquee —
  *  the handoff's rule, ported verbatim so Flutter can do the same. */
-export function titleSize(title: string, mobile = false): number {
-  if (title.length > 60) return mobile ? 26 : 34
-  if (title.length > 30) return mobile ? 30 : 46
-  return mobile ? 34 : 58
+export function titleSize(title: string, mobile = false): string {
+  if (title.length > 60) return px(mobile ? 26 : 34)
+  if (title.length > 30) return px(mobile ? 30 : 46)
+  return px(mobile ? 34 : 58)
 }

@@ -6,6 +6,12 @@
    ========================================================================== */
 
 :root {
+  /* --- TEXT SCALE ---------------------------------------------------------
+     User-adjustable, 1 = the size the design was drawn at. Every type token
+     below multiplies by this, so the ratios of the scale never change — only
+     its overall size. [F: MediaQuery.textScaler, same idea.]                 */
+  --nyx-text-scale: 1;
+
   /* --- TYPE FAMILIES -----------------------------------------------------
      [F: ThemeData.textTheme + GoogleFonts.literata()/alegreyaSans()/ibmPlexMono()
          Bundle the .ttf in pubspec assets — the Pi may be offline.]           */
@@ -66,24 +72,24 @@
   /* --- TYPE SCALE (px; 1.25-ish, hand-tuned) ---------------------------
      [F: TextTheme entries, one per line. Mono roles always
          fontFeatures:[FontFeature.tabularFigures()].]                        */
-  --nyx-t-mono-xs: 9.5px;   /* eyebrow labels, letterSpacing .2em */
-  --nyx-t-mono-sm: 10.5px;  /* signal path, timecodes, counts */
-  --nyx-t-mono-md: 11.5px;  /* crate reason */
-  --nyx-t-body-sm: 11.5px;
-  --nyx-t-body-md: 14.5px;  /* default UI text — Alegreya Sans has a small
+  --nyx-t-mono-xs: calc(9.5px * var(--nyx-text-scale));   /* eyebrow labels, letterSpacing .2em */
+  --nyx-t-mono-sm: calc(10.5px * var(--nyx-text-scale));  /* signal path, timecodes, counts */
+  --nyx-t-mono-md: calc(11.5px * var(--nyx-text-scale));  /* crate reason */
+  --nyx-t-body-sm: calc(11.5px * var(--nyx-text-scale));
+  --nyx-t-body-md: calc(14.5px * var(--nyx-text-scale));  /* default UI text — Alegreya Sans has a small
                                x-height, so the body ladder sits ~1px larger
                                than a grotesque would need */
-  --nyx-t-body-lg: 15.5px;  /* base font size — Alegreya Sans has a small
+  --nyx-t-body-lg: calc(15.5px * var(--nyx-text-scale));  /* base font size — Alegreya Sans has a small
                                x-height, so the ladder sits ~1px larger
                                than a grotesque would need */
-  --nyx-t-disp-sm: 17px;
-  --nyx-t-disp-md: 22px;
-  --nyx-t-disp-lg: 34px;    /* screen titles */
-  --nyx-t-disp-xl: 46px;    /* album title */
-  --nyx-t-disp-2xl: 58px;   /* album title, short */
-  --nyx-t-lyric: 34px;          /* active lyric line, desktop (24px mobile) */
-  --nyx-t-lyric-inactive: 29px; /* neighbouring lines, desktop (21px mobile) */
-  --nyx-t-ambient: clamp(44px, 5.4vw, 84px); /* [F: LayoutBuilder ratio, not vw] */
+  --nyx-t-disp-sm: calc(17px * var(--nyx-text-scale));
+  --nyx-t-disp-md: calc(22px * var(--nyx-text-scale));
+  --nyx-t-disp-lg: calc(34px * var(--nyx-text-scale));    /* screen titles */
+  --nyx-t-disp-xl: calc(46px * var(--nyx-text-scale));    /* album title */
+  --nyx-t-disp-2xl: calc(58px * var(--nyx-text-scale));   /* album title, short */
+  --nyx-t-lyric: calc(34px * var(--nyx-text-scale));          /* active lyric line, desktop (24px mobile) */
+  --nyx-t-lyric-inactive: calc(29px * var(--nyx-text-scale)); /* neighbouring lines, desktop (21px mobile) */
+  --nyx-t-ambient: clamp(calc(44px * var(--nyx-text-scale)), 5.4vw, calc(84px * var(--nyx-text-scale))); /* [F: LayoutBuilder ratio, not vw] */
   --nyx-lh-tight: 1.06;  --nyx-lh-body: 1.5;  --nyx-lh-read: 1.7;
   --nyx-ls-mono: 0.08em; --nyx-ls-eyebrow: 0.2em; --nyx-ls-display: -0.015em;
 

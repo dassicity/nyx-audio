@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { SubsonicClient } from '../api/subsonic.js'
 import { SubsonicError, SUBSONIC_WRONG_CREDENTIALS } from '../api/types.js'
 import { saveCredentials } from '../auth.js'
+import { px } from '../format.js'
 
 export function Login({ onAuthed }: { onAuthed: (c: SubsonicClient) => void }) {
   const [username, setUsername] = useState('')
@@ -38,7 +39,7 @@ export function Login({ onAuthed }: { onAuthed: (c: SubsonicClient) => void }) {
     }}>
       <form onSubmit={submit} style={{ width: 'min(340px, 100%)' }}>
         <div className="display" style={{
-          fontSize: 38, fontWeight: 300, lineHeight: 1.06,
+          fontSize: px(38), fontWeight: 300, lineHeight: 1.06,
         }}>Nyx</div>
         <div className="eyebrow" style={{ marginTop: 6 }}>Audio</div>
 
