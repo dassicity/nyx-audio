@@ -46,8 +46,13 @@ FQDN="$(tailscale status --json 2>/dev/null \
 
 RENDERED="$(sed "s|{{FQDN}}|${FQDN}|g" "$TEMPLATE")"
 
+CHANGED=1
 if [[ -f "$TARGET" ]] && [[ "$RENDERED" == "$(cat "$TARGET")" ]]; then
   have "$(basename "$TARGET") matches the template"
+  CHANGED=0
+fi
+
+if (( CHECK )) && (( ! CHANGED )); then
   exit 0
 fi
 
@@ -57,19 +62,24 @@ if (( CHECK )); then
   exit 1
 fi
 
-mkdir -p "$(dirname "$TARGET")"
-printf '%s\n' "$RENDERED" > "$TARGET"
-good "regenerated $(basename "$TARGET") for $FQDN"
+if (( CHANGED )); then
+  mkdir -p "$(dirname "$TARGET")"
+  printf '%s\n' "$RENDERED" > "$TARGET"
+  good "regenerated $(basename "$TARGET") for $FQDN"
+fi
 
-# A config file Caddy has not read is not yet configuration.
+# Always reconcile the running container, even when the file was already
+# correct. A bind-mounted file changing does not make Caddy re-read it, so a
+# correct file and a stale process look identical from the outside — which is
+# exactly how the tailnet address kept serving the wrong application.
+#
+# `up -d` rather than `restart`: restart reloads config but cannot add a
+# volume that was absent when the container was created, and this mount was
+# added after the fact.
 if command -v docker >/dev/null && docker compose version >/dev/null 2>&1; then
-  if docker compose ps --status running 2>/dev/null | grep -q caddy; then
-    if docker compose restart caddy >/dev/null 2>&1; then
-      good "caddy reloaded"
-    else
-      warn "could not restart caddy — run: docker compose restart caddy"
-    fi
+  if docker compose up -d caddy >/dev/null 2>&1; then
+    good "caddy reconciled with the current config"
   else
-    have "caddy is not running; it will pick this up on next start"
+    warn "could not reconcile caddy — run: docker compose up -d caddy"
   fi
 fi
