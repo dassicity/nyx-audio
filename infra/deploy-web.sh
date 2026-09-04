@@ -157,8 +157,21 @@ RSH="ssh ${SSH_OPTS[*]}"
 rsync -ah --delete --progress -e "$RSH" "$DIST/" "$TARGET:$WEB_DIR/" || die "rsync failed."
 good "deployed"
 
+# ── 5. Keeping the two site blocks in step ───────────────────────────────
+step "5. Server configuration"
+
+# The LAN block is tracked and arrives by rsync; the tailnet block is
+# generated on the server and gitignored. Regenerating here means a routing
+# change cannot leave the two addresses serving different applications.
+if ssh "${SSH_OPTS[@]}" "$TARGET" "test -x ~/nyx-audio/infra/render-caddy.sh" 2>/dev/null; then
+  ssh "${SSH_OPTS[@]}" "$TARGET" "cd ~/nyx-audio/infra && ./render-caddy.sh" \
+    || warn "could not regenerate the Caddy fragment; the tailnet address may be stale"
+else
+  have "render-caddy.sh not on the server yet — rsync infra/ across to enable this"
+fi
+
 # ── 5. Verify ────────────────────────────────────────────────────────────
-step "5. Verifying"
+step "6. Verifying"
 for SCHEME in https http; do
   CODE="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "$SCHEME://$NYX_HOST/" 2>/dev/null || echo 000)"
   [[ "$CODE" != "000" ]] && break

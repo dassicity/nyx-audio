@@ -131,17 +131,10 @@ fi
 # ── 5. Caddy site block ──────────────────────────────────────────────────
 step "5. Caddy configuration"
 
-TEMPLATE=caddy/conf.d/tailscale.caddy.example
-TARGET=caddy/conf.d/tailscale.caddy
-[[ -f "$TEMPLATE" ]] || die "Missing $TEMPLATE — is the repo complete?"
-
-RENDERED="$(sed "s|{{FQDN}}|${FQDN}|g" "$TEMPLATE")"
-if [[ -f "$TARGET" ]] && [[ "$RENDERED" == "$(cat "$TARGET")" ]]; then
-  have "$TARGET is current"
-else
-  printf '%s\n' "$RENDERED" > "$TARGET"
-  good "wrote $TARGET for $FQDN"
-fi
+# Delegated to render-caddy.sh so there is exactly one place that turns the
+# template into the generated file. Two copies of this logic is how the
+# tailnet block silently drifted from the LAN block the first time.
+./render-caddy.sh || die "Could not render the Caddy fragment."
 
 # ── 6. Validate and restart ──────────────────────────────────────────────
 step "6. Applying it"
