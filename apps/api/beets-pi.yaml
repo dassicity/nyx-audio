@@ -1,0 +1,84 @@
+# Nyx Audio — beets, as it runs on the Pi for browser uploads.
+#
+# Deliberately NOT the same as tools/beets/config.yaml, which is for curating
+# a collection by hand on a laptop. The differences are the whole point:
+#
+#   quiet_fallback: skip   never guess. An album beets is unsure about is left
+#                          in staging, quarantined, and shown in the interface.
+#   move: yes              staged uploads move into the library rather than
+#                          being copied, so a 2 GB album is not written twice
+#                          onto a microSD card.
+#   no `edit` plugin       nothing here can prompt; a prompt would hang the
+#                          import forever waiting for input nobody can give.
+
+directory: /music
+library: /data/beets.db
+
+# Must match tools/beets/config.yaml exactly, or uploads file differently from
+# the collection that was imported on the laptop.
+item_fields:
+  multidisc: 1 if disctotal > 1 else 0
+
+paths:
+  default:   $albumartist/$album%aunique{} (%if{$original_year,$original_year,$year})/%if{$multidisc,$disc-}$track $title
+  comp:      Various Artists/$album%aunique{} (%if{$original_year,$original_year,$year})/%if{$multidisc,$disc-}$track $title
+  singleton: Singles/$artist/$title
+
+# APFS and ext4 handle UTF-8 perfectly well, and asciifying mangles half a
+# serious collection — Cesária Évora, Górecki, Ali Farka Touré.
+asciify_paths: no
+
+import:
+  copy: no
+  move: yes
+  write: yes
+  incremental: no
+  resume: no
+  quiet: yes
+  # The safety catch. Without this, quiet mode applies its best guess to an
+  # ambiguous album; with it, beets declines and leaves the files alone.
+  quiet_fallback: skip
+  timid: no
+  log: /data/import.log
+  # Duplicates are skipped rather than merged: re-uploading an album you
+  # already own should be a no-op, not a second copy.
+  duplicate_action: skip
+
+plugins: >
+  musicbrainz
+  chroma
+  fetchart
+  replaygain
+  scrub
+  badfiles
+  duplicates
+
+musicbrainz:
+  # A weaker match than this is exactly what quarantine exists for.
+  searchlimit: 5
+
+match:
+  # Anything above this is applied automatically; anything below is skipped.
+  # 0.04 is beets' default strong-match threshold and is already fairly
+  # demanding — loosening it is how wrong metadata gets into the library.
+  strong_rec_thresh: 0.04
+  max_rec:
+    missing_tracks: medium
+    unmatched_tracks: medium
+
+fetchart:
+  auto: yes
+  sources: filesystem coverart itunes albumart
+
+replaygain:
+  auto: yes
+  backend: ffmpeg
+  # Album gain preserves the record as it was sequenced, which is the whole
+  # argument for album mode in the player.
+  overwrite: no
+
+scrub:
+  auto: yes
+
+badfiles:
+  check_on_import: yes

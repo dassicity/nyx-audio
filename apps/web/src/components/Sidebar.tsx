@@ -14,6 +14,7 @@ const NAV = [
   { code: 'PL', label: 'Playlists', to: '/playlists' },
   { code: 'FV', label: 'Favourites', to: '/favourites' },
   { code: 'CR', label: 'Crate', to: '/crate' },
+  { code: 'IM', label: 'Import', to: '/import' },
   { code: 'ST', label: 'Statistics', to: '/stats' },
   { code: 'YR', label: 'Listening year', to: '/year' },
   { code: 'SE', label: 'Settings', to: '/settings' },

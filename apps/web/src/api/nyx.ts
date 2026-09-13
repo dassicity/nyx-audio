@@ -111,3 +111,91 @@ export async function getLyrics(
   })
   return get<ApiLyrics>(`/api/lyrics?${qs}`)
 }
+
+// ── import ───────────────────────────────────────────────────────────────
+
+export type BatchStatus =
+  | 'staging' | 'queued' | 'running' | 'imported' | 'partial' | 'failed'
+
+export interface ImportFile {
+  name: string
+  bytes: number
+  status: 'uploaded' | 'imported' | 'quarantined'
+}
+
+export interface ImportBatch {
+  id: string
+  created_at: string
+  finished_at: string | null
+  status: BatchStatus
+  message: string | null
+  log: string | null
+  files?: ImportFile[]
+  file_count?: number
+  bytes?: number
+}
+
+export async function createBatch(): Promise<{ id: string }> {
+  const res = await fetch('/api/import/batches', { method: 'POST' })
+  if (!res.ok) throw new ApiUnavailable()
+  return res.json() as Promise<{ id: string }>
+}
+
+/**
+ * Upload one file, reporting progress.
+ *
+ * XHR rather than fetch: fetch still has no upload progress event, and a
+ * 400 MB album transferring with no feedback is indistinguishable from a
+ * hang.
+ */
+export function uploadFile(
+  batchId: string,
+  file: File,
+  onProgress: (fraction: number) => void,
+  signal?: AbortSignal,
+): Promise<{ name: string; bytes: number }> {
+  return new Promise((resolve, reject) => {
+    const form = new FormData()
+    form.append('file', file)
+
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `/api/import/batches/${batchId}/files`)
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(e.loaded / e.total)
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onProgress(1)
+        resolve(JSON.parse(xhr.responseText))
+      } else {
+        // The server explains why it refused; show that rather than a code.
+        let detail = `upload failed (${xhr.status})`
+        try { detail = JSON.parse(xhr.responseText).detail ?? detail } catch { /* keep */ }
+        reject(new Error(detail))
+      }
+    }
+    xhr.onerror = () => reject(new Error('the connection dropped'))
+    xhr.onabort = () => reject(new DOMException('aborted', 'AbortError'))
+    signal?.addEventListener('abort', () => xhr.abort())
+
+    xhr.send(form)
+  })
+}
+
+export async function startBatch(batchId: string): Promise<void> {
+  const res = await fetch(`/api/import/batches/${batchId}/start`, { method: 'POST' })
+  if (!res.ok) throw new Error(`could not start the import (${res.status})`)
+}
+
+export async function getBatch(batchId: string): Promise<ImportBatch> {
+  return get<ImportBatch>(`/api/import/batches/${batchId}`)
+}
+
+export async function listBatches(): Promise<ImportBatch[]> {
+  return get<ImportBatch[]>('/api/import/batches')
+}
+
+export async function discardBatch(batchId: string): Promise<void> {
+  await fetch(`/api/import/batches/${batchId}`, { method: 'DELETE' })
+}

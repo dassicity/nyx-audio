@@ -29,7 +29,18 @@ https://{{FQDN}} {
 	}
 
 	handle /api/* {
-		reverse_proxy nyx-api:8000
+		# An album upload is hundreds of megabytes and a hi-res movement can
+		# exceed a gigabyte; the default limit would reject both.
+		request_body {
+			max_size 3GB
+		}
+		reverse_proxy nyx-api:8000 {
+			# Uploads and imports take minutes, not seconds.
+			transport http {
+				read_timeout 30m
+				write_timeout 30m
+			}
+		}
 	}
 
 	# Everything else is the Nyx client: a static SPA built on the laptop and

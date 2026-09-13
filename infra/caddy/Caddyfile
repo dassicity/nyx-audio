@@ -12,7 +12,11 @@
 # you use to confirm the first scan found everything.
 
 {
-	admin off
+	# The admin API stays ON. It binds to localhost:2019 INSIDE the container
+	# and only 80/443 are published, so it is not reachable from the network —
+	# `admin off` bought no security here and cost the ability to run
+	# `caddy reload`, which is the only way to re-read a bind-mounted config
+	# without dropping connections.
 	# Uncomment while debugging a route:
 	# debug
 }
@@ -54,7 +58,18 @@
 	}
 
 	handle /api/* {
-		reverse_proxy nyx-api:8000
+		# An album upload is hundreds of megabytes and a hi-res movement can
+		# exceed a gigabyte; the default limit would reject both.
+		request_body {
+			max_size 3GB
+		}
+		reverse_proxy nyx-api:8000 {
+			# Uploads and imports take minutes, not seconds.
+			transport http {
+				read_timeout 30m
+				write_timeout 30m
+			}
+		}
 	}
 
 	# Everything else is the Nyx client: a static SPA built on the laptop and

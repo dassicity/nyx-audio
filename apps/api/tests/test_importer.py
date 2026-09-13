@@ -1,0 +1,265 @@
+"""Import tests.
+
+Filename handling gets the most attention here because it is the security
+boundary: those names come from a browser and are used to build paths.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from nyx_api import db, importer
+from nyx_api.importer import RejectedUpload
+
+
+@pytest.fixture
+def conn(tmp_path):
+    c = db.connect(tmp_path / "nyx.db")
+    c.executescript(importer.SCHEMA)
+    c.commit()
+    yield c
+    c.close()
+
+
+class TestSafeFilename:
+    def test_keeps_an_ordinary_name(self):
+        assert importer.safe_filename("01 Allah Hoo.flac") == "01 Allah Hoo.flac"
+
+    def test_preserves_diacritics(self):
+        # asciify_paths is deliberately off in the beets config; mangling
+        # names here would be inconsistent and lossy.
+        assert importer.safe_filename("Cesária Évora.flac") == "Cesária Évora.flac"
+        assert importer.safe_filename("Górecki — III.flac") == "Górecki — III.flac"
+
+    @pytest.mark.parametrize(
+        "attack",
+        [
+            "../../etc/passwd",
+            "../../../srv/music/x.flac",
+            "/etc/cron.d/evil",
+            "..\\..\\windows\\system32\\x",
+            "subdir/../../escape.flac",
+        ],
+    )
+    def test_strips_path_traversal(self, attack):
+        safe = importer.safe_filename(attack)
+        assert "/" not in safe and "\\" not in safe
+        assert not safe.startswith("..")
+
+    def test_takes_the_basename_of_a_windows_path(self):
+        # os.path.basename on Linux does not split backslashes, so this has
+        # to be handled explicitly.
+        assert importer.safe_filename(r"C:\Music\Album\02 Track.flac") == "02 Track.flac"
+
+    def test_removes_control_characters(self):
+        assert "\x00" not in importer.safe_filename("bad\x00name.flac")
+        assert "\n" not in importer.safe_filename("two\nlines.flac")
+
+    def test_rejects_names_that_reduce_to_nothing(self):
+        for bad in ["", "...", "/", "../", "   "]:
+            with pytest.raises(RejectedUpload):
+                importer.safe_filename(bad)
+
+    def test_truncates_absurd_names_but_keeps_the_extension(self):
+        name = importer.safe_filename("x" * 500 + ".flac")
+        assert len(name) <= 200
+        assert name.endswith(".flac")
+
+    def test_normalises_unicode(self):
+        decomposed = "Cesa\u0301ria.flac"   # e + combining acute
+        composed = "Ces\u00e1ria.flac"
+        assert importer.safe_filename(decomposed) == importer.safe_filename(composed)
+
+
+class TestValidation:
+    @pytest.mark.parametrize("name", ["a.flac", "a.mp3", "a.M4A", "cover.jpg", "rip.log"])
+    def test_accepts_music_and_sidecars(self, name):
+        importer.check_extension(name)
+
+    @pytest.mark.parametrize("name", ["a.exe", "a.sh", "a", "a.zip", "a.php"])
+    def test_rejects_everything_else(self, name):
+        with pytest.raises(RejectedUpload):
+            importer.check_extension(name)
+
+    def test_distinguishes_audio_from_sidecars(self):
+        assert importer.is_audio("01.flac") is True
+        assert importer.is_audio("cover.jpg") is False
+
+    def test_size_limits(self):
+        importer.check_size(50_000_000)
+        with pytest.raises(RejectedUpload):
+            importer.check_size(0)
+        with pytest.raises(RejectedUpload):
+            importer.check_size(importer.MAX_FILE_BYTES + 1)
+
+    def test_allows_a_genuinely_large_hi_res_movement(self):
+        # A 26-minute 24/192 track is over a gigabyte and is not an attack.
+        importer.check_size(1_400_000_000)
+
+
+class TestStagingPath:
+    def test_resolves_inside_the_batch(self, tmp_path):
+        (tmp_path / "abc").mkdir()
+        p = importer.staging_path(tmp_path, "abc", "track.flac")
+        assert p.parent.name == "abc"
+
+    def test_refuses_to_escape(self, tmp_path):
+        (tmp_path / "abc").mkdir()
+        with pytest.raises(RejectedUpload):
+            importer.staging_path(tmp_path, "abc", "../../escape.flac")
+
+
+class TestBatchRecords:
+    def test_lifecycle(self, conn):
+        bid = importer.new_batch_id()
+        importer.create_batch(conn, bid)
+        importer.add_file(conn, bid, "01.flac", 40_000_000)
+        importer.add_file(conn, bid, "02.flac", 38_000_000)
+
+        batch = importer.get_batch(conn, bid)
+        assert batch["status"] == "staging"
+        assert len(batch["files"]) == 2
+
+        importer.set_status(conn, bid, "imported", "2 files imported")
+        batch = importer.get_batch(conn, bid)
+        assert batch["status"] == "imported"
+        assert batch["finished_at"] is not None
+
+    def test_only_terminal_statuses_set_a_finish_time(self, conn):
+        bid = importer.new_batch_id()
+        importer.create_batch(conn, bid)
+        importer.set_status(conn, bid, "running")
+        assert importer.get_batch(conn, bid)["finished_at"] is None
+
+    def test_rejects_an_unknown_status(self, conn):
+        bid = importer.new_batch_id()
+        importer.create_batch(conn, bid)
+        with pytest.raises(ValueError):
+            importer.set_status(conn, bid, "vibing")
+
+    def test_missing_batch_is_none(self, conn):
+        assert importer.get_batch(conn, "nope") is None
+
+    def test_batch_ids_are_unguessable_and_unique(self):
+        ids = {importer.new_batch_id() for _ in range(200)}
+        assert len(ids) == 200
+        assert all(len(i) == 16 for i in ids)
+
+    def test_listing_aggregates_size_and_count(self, conn):
+        bid = importer.new_batch_id()
+        importer.create_batch(conn, bid)
+        importer.add_file(conn, bid, "01.flac", 100)
+        importer.add_file(conn, bid, "02.flac", 250)
+        row = importer.list_batches(conn)[0]
+        assert row["file_count"] == 2 and row["bytes"] == 350
+
+
+class TestRunImport:
+    def test_empty_batch_fails_cleanly(self, conn, tmp_path):
+        bid = importer.new_batch_id()
+        importer.create_batch(conn, bid)
+        (tmp_path / "staging" / bid).mkdir(parents=True)
+        result = importer.run_import(
+            conn, bid, tmp_path / "staging", tmp_path / "quarantine",
+            Path("/nonexistent.yaml"),
+        )
+        assert result["status"] == "failed"
+        assert "nothing was uploaded" in importer.get_batch(conn, bid)["message"]
+
+    def test_says_so_when_beets_is_absent(self, conn, tmp_path, monkeypatch):
+        bid = importer.new_batch_id()
+        importer.create_batch(conn, bid)
+        staging = tmp_path / "staging" / bid
+        staging.mkdir(parents=True)
+        (staging / "01.flac").write_bytes(b"not really audio")
+        importer.add_file(conn, bid, "01.flac", 16)
+
+        def no_beets(*a, **k):
+            raise FileNotFoundError("beet")
+
+        monkeypatch.setattr(importer.subprocess, "run", no_beets)
+        result = importer.run_import(
+            conn, bid, tmp_path / "staging", tmp_path / "quarantine",
+            Path("/cfg.yaml"),
+        )
+        assert result["status"] == "failed"
+        assert "not installed" in importer.get_batch(conn, bid)["message"]
+
+    def test_leftovers_are_quarantined_not_discarded(self, conn, tmp_path, monkeypatch):
+        """Whatever beets would not commit to must survive somewhere visible.
+
+        This is what makes unattended import safe: an ambiguous album is held
+        for a decision rather than filed under a guess.
+        """
+        bid = importer.new_batch_id()
+        importer.create_batch(conn, bid)
+        staging = tmp_path / "staging" / bid
+        staging.mkdir(parents=True)
+        (staging / "unmatched.flac").write_bytes(b"x" * 32)
+        importer.add_file(conn, bid, "unmatched.flac", 32)
+
+        class Done:
+            stdout, stderr, returncode = "skipped", "", 0
+
+        monkeypatch.setattr(importer.subprocess, "run", lambda *a, **k: Done())
+
+        quarantine = tmp_path / "quarantine"
+        result = importer.run_import(
+            conn, bid, tmp_path / "staging", quarantine, Path("/cfg.yaml"),
+        )
+
+        assert result["quarantined"] == 1
+        assert (quarantine / bid / "unmatched.flac").exists()
+        assert importer.get_batch(conn, bid)["status"] == "partial"
+
+    def test_a_clean_import_reports_imported(self, conn, tmp_path, monkeypatch):
+        bid = importer.new_batch_id()
+        importer.create_batch(conn, bid)
+        staging = tmp_path / "staging" / bid
+        staging.mkdir(parents=True)
+        track = staging / "01.flac"
+        track.write_bytes(b"x" * 32)
+        importer.add_file(conn, bid, "01.flac", 32)
+
+        class Done:
+            stdout, stderr, returncode = "imported", "", 0
+
+        def fake_run(*a, **k):
+            track.unlink()  # beets moves accepted files out of staging
+            return Done()
+
+        monkeypatch.setattr(importer.subprocess, "run", fake_run)
+        result = importer.run_import(
+            conn, bid, tmp_path / "staging", tmp_path / "quarantine", Path("/cfg.yaml"),
+        )
+        assert result == {"status": "imported", "imported": 1, "quarantined": 0}
+
+    def test_sidecars_alone_do_not_count_as_quarantined(self, conn, tmp_path, monkeypatch):
+        # beets leaves cover art behind; that is not a failed match.
+        bid = importer.new_batch_id()
+        importer.create_batch(conn, bid)
+        staging = tmp_path / "staging" / bid
+        staging.mkdir(parents=True)
+        (staging / "cover.jpg").write_bytes(b"x" * 8)
+        importer.add_file(conn, bid, "cover.jpg", 8)
+
+        class Done:
+            stdout, stderr, returncode = "", "", 0
+
+        monkeypatch.setattr(importer.subprocess, "run", lambda *a, **k: Done())
+        result = importer.run_import(
+            conn, bid, tmp_path / "staging", tmp_path / "quarantine", Path("/cfg.yaml"),
+        )
+        assert result["quarantined"] == 0
+
+
+def test_quiet_flag_is_present():
+    """Quiet mode is the design, not a convenience.
+
+    Without -q, beets prompts on an ambiguous match and the import hangs
+    forever waiting for input nobody can give it.
+    """
+    cmd = importer.beets_command(Path("/cfg.yaml"), Path("/staging/abc"))
+    assert "-q" in cmd
+    assert cmd[0] == "beet"

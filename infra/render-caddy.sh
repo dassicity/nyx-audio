@@ -68,18 +68,30 @@ if (( CHANGED )); then
   good "regenerated $(basename "$TARGET") for $FQDN"
 fi
 
-# Always reconcile the running container, even when the file was already
-# correct. A bind-mounted file changing does not make Caddy re-read it, so a
-# correct file and a stale process look identical from the outside — which is
-# exactly how the tailnet address kept serving the wrong application.
+# Always make the running Caddy re-read its config, even when the file was
+# already correct. Three instruments, and only one of them actually works:
 #
-# `up -d` rather than `restart`: restart reloads config but cannot add a
-# volume that was absent when the container was created, and this mount was
-# added after the fact.
+#   restart  — restarts the process, but cannot add a volume that was absent
+#              when the container was created
+#   up -d    — applies compose.yml changes, but a bind-mounted FILE's contents
+#              are not part of Compose's change detection, so it reports
+#              "Running" and does nothing at all
+#   reload   — Caddy re-reads the Caddyfile and its imports, without dropping
+#              connections. Needs the admin API; fails if `admin off` is set.
+#
+# That distinction is why the tailnet address served the wrong application for
+# hours while every check reported the config was correct.
 if command -v docker >/dev/null && docker compose version >/dev/null 2>&1; then
-  if docker compose up -d caddy >/dev/null 2>&1; then
-    good "caddy reconciled with the current config"
+  if ! docker compose ps --status running 2>/dev/null | grep -q caddy; then
+    have "caddy is not running; it will read this on next start"
+  elif docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1; then
+    good "caddy reloaded its configuration"
+  elif docker compose restart caddy >/dev/null 2>&1; then
+    # Reload needs the admin API. Restart always works and is fine for a
+    # home server, so it is a real fallback rather than a formality.
+    good "caddy restarted (reload unavailable — admin API off?)"
   else
-    warn "could not reconcile caddy — run: docker compose up -d caddy"
+    warn "could not reload caddy — run:"
+    warn "  docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile"
   fi
 fi

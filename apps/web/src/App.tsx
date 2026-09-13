@@ -19,6 +19,7 @@ import { Today } from './screens/Today.js'
 import { Favourites } from './screens/Favourites.js'
 import { Playlists } from './screens/Playlists.js'
 import { Stats } from './screens/Stats.js'
+import { Import } from './screens/Import.js'
 import { usePlayer } from './player.js'
 
 export function App() {
@@ -50,6 +51,7 @@ export function App() {
             <Route path="/favourites" element={<Favourites />} />
             <Route path="/crate" element={<Crate />} />
             <Route path="/stats" element={<Stats />} />
+            <Route path="/import" element={<Import />} />
             <Route path="/year" element={
               <Planned title="Listening year" version="year · needs nyx-api"
                 blurb="An editorial report written from your own history. Not for posting anywhere." />} />

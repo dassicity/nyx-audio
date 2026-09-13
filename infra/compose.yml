@@ -88,6 +88,13 @@ services:
       # Bind mount for the same reason as Navidrome's: a named volume is
       # created root-owned and this container runs as UID 1000.
       - "${DATA_DIR:-/srv/nyx}/api:/data"
+      # WRITABLE, unlike Navidrome's mount of the same directory. This is the
+      # only writer in the stack, which is what keeps D9's rule intact: a bug
+      # in the library server still cannot touch your files.
+      - "${MUSIC_DIR:-/srv/music}:/music"
+      # Uploads land here, not on the library volume, so a half-finished
+      # transfer is never picked up by a scan.
+      - "${DATA_DIR:-/srv/nyx}/import:/import"
     networks: [nyx]
 
 volumes:

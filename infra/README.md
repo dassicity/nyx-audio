@@ -123,48 +123,49 @@ public CA will issue a certificate for a private IP.
 
 ---
 
-## 7. Deploy the client
+## 7. Deploying
 
-Everything runs on the server: Caddy serves the built client at `/` and
-proxies the API to Navidrome on the same origin. One origin means no CORS, and
-the client only ever calls relative paths — so the same bundle works over LAN
-HTTP and over TLS without a rebuild.
+Everything runs on the server: Caddy serves the built client at `/`, proxies
+`/rest` to Navidrome and `/api` to nyx-api. One origin, so no CORS, and the
+client only ever calls relative paths.
 
-From your **workstation** (the server builds nothing — D9):
-
-```bash
-./deploy-web.sh
-```
-
-On first run it asks for the host, login and target directory, offers to save
-them to `infra/.deploy.env` (gitignored), and offers to generate and install
-an ssh key so nothing prompts for a password again. After that it is one
-command with no interaction beyond confirming the rsync.
-
-Settings resolve as environment variables → `.deploy.env` → ask. So a one-off
-deploy to a different machine needs no config file:
+### From git, on the server
 
 ```bash
-NYX_HOST=192.168.1.42 NYX_USER=pi ./deploy-web.sh
+cd ~/nyx-audio/infra && ./deploy.sh
 ```
 
-`--reconfigure` re-asks everything. `--yes` skips all prompts, for CI or a
-`make deploy`.
+Pulls, rebuilds only what changed, publishes the client bundle, reconciles
+Caddy, and verifies both the client and the API answer.
 
-After deploying:
+This needs no exclude list, because **everything machine-specific is
+gitignored** — `.env`, `caddy/certs/`, `caddy/conf.d/tailscale.caddy`,
+`.deploy.env`. A pull cannot overwrite this machine's own configuration.
+
+It refuses to pull over a dirty working tree without asking, since merging
+silently over an edit made on the server is how you lose a fix nobody wrote
+down.
+
+### The one thing git does not carry
+
+`apps/web/dist` is build output and does not belong in a repository. Two ways
+to get it onto the server:
+
+- **`deploy.sh` builds it there**, if `pnpm` is installed. Slower than a
+  workstation, but keeps deployment to a single command.
+- **`deploy-web.sh` sends it from your workstation** — the D9 answer, and
+  what to use if you would rather not put a JS toolchain on the Pi.
+
+Either works; `deploy.sh` detects which applies and says so.
+
+### Where things are served
 
 | URL | What |
 |---|---|
 | `/` | the Nyx client |
 | `/app/` | Navidrome's own UI, for admin — users, scans, transcoding |
 | `/rest/` | the OpenSubsonic API |
-
-Local development still runs Vite on your workstation against the server's
-API (`pnpm --filter @nyx/web dev`); copy `apps/web/.env.local.example` to
-`.env.local` and set `NYX_SERVER`. That proxy is development-only and never
-reaches the build — `deploy-web.sh` checks the bundle for a hard-coded host
-before deploying, because that failure would work locally and break in
-production.
+| `/api/` | nyx-api — play history, statistics, lyrics cache, imports |
 
 ---
 

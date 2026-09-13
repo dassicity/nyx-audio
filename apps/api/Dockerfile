@@ -13,6 +13,18 @@ ENV UV_COMPILE_BYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
+# beets shells out to all of these:
+#   ffmpeg      ReplayGain scanning
+#   libchromaprint-tools  fpcalc, for acoustic fingerprinting
+#   flac        the badfiles plugin uses it to detect corrupt files
+#   imagemagick cover art resizing
+# This roughly triples the image, which is the price of importing from a
+# browser instead of an ssh session.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ffmpeg libchromaprint-tools flac imagemagick \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Dependencies first, so a source change does not re-resolve the world.
@@ -27,8 +39,12 @@ RUN uv sync --no-dev
 RUN useradd --create-home --uid 1000 nyx || true
 USER 1000
 
+COPY beets-pi.yaml /config/beets.yaml
+
 ENV PATH="/app/.venv/bin:$PATH" \
-    NYX_DB=/data/nyx.db
+    NYX_DB=/data/nyx.db \
+    NYX_IMPORT_DIR=/import \
+    NYX_BEETS_CONFIG=/config/beets.yaml
 
 EXPOSE 8000
 

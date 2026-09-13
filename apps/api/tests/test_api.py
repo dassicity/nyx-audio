@@ -21,6 +21,7 @@ def conn(tmp_path):
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("NYX_DB", str(tmp_path / "api.db"))
+    monkeypatch.setenv("NYX_IMPORT_DIR", str(tmp_path / "import"))
     import importlib
 
     from nyx_api import main
@@ -216,3 +217,100 @@ def test_transaction_rolls_back(tmp_path):
             conn.execute("INSERT INTO plays (track_id) VALUES ('x')")
     assert conn.execute("SELECT COUNT(*) AS n FROM plays").fetchone()["n"] == 0
     conn.close()
+
+
+class TestImportEndpoints:
+    """The upload flow, exercised end to end without beets."""
+
+    def test_full_flow(self, client, monkeypatch):
+        from nyx_api import importer
+
+        batch = client.post("/api/import/batches").json()
+        assert len(batch["id"]) == 16
+
+        r = client.post(
+            f"/api/import/batches/{batch['id']}/files",
+            files={"file": ("01 Allah Hoo.flac", b"x" * 4096, "audio/flac")},
+        )
+        assert r.status_code == 201
+        assert r.json() == {"name": "01 Allah Hoo.flac", "bytes": 4096}
+
+        detail = client.get(f"/api/import/batches/{batch['id']}").json()
+        assert detail["status"] == "staging" and len(detail["files"]) == 1
+
+        # Do not actually shell out to beets in a test.
+        monkeypatch.setattr(importer, "run_import", lambda *a, **k: None)
+        assert client.post(f"/api/import/batches/{batch['id']}/start").status_code == 202
+
+    def test_traversal_in_the_upload_name_is_neutralised(self, client):
+        batch = client.post("/api/import/batches").json()
+        r = client.post(
+            f"/api/import/batches/{batch['id']}/files",
+            files={"file": ("../../../etc/evil.flac", b"x" * 64, "audio/flac")},
+        )
+        assert r.status_code == 201
+        # Flattened to a basename; nothing escaped the batch directory.
+        assert r.json()["name"] == "evil.flac"
+
+    def test_rejects_a_non_music_file(self, client):
+        batch = client.post("/api/import/batches").json()
+        r = client.post(
+            f"/api/import/batches/{batch['id']}/files",
+            files={"file": ("payload.sh", b"#!/bin/sh\nrm -rf /", "text/plain")},
+        )
+        assert r.status_code == 400
+        assert "not music" in r.json()["detail"]
+
+    def test_rejects_an_empty_file(self, client):
+        batch = client.post("/api/import/batches").json()
+        r = client.post(
+            f"/api/import/batches/{batch['id']}/files",
+            files={"file": ("empty.flac", b"", "audio/flac")},
+        )
+        assert r.status_code == 400
+
+    def test_unknown_batch_is_404(self, client):
+        assert client.get("/api/import/batches/nope").status_code == 404
+        assert client.post(
+            "/api/import/batches/nope/files",
+            files={"file": ("a.flac", b"x", "audio/flac")},
+        ).status_code == 404
+
+    def test_cannot_start_an_empty_batch(self, client):
+        batch = client.post("/api/import/batches").json()
+        assert client.post(f"/api/import/batches/{batch['id']}/start").status_code == 400
+
+    def test_cannot_upload_into_a_started_batch(self, client, monkeypatch):
+        from nyx_api import importer
+
+        batch = client.post("/api/import/batches").json()
+        client.post(
+            f"/api/import/batches/{batch['id']}/files",
+            files={"file": ("01.flac", b"x" * 64, "audio/flac")},
+        )
+        monkeypatch.setattr(importer, "run_import", lambda *a, **k: None)
+        client.post(f"/api/import/batches/{batch['id']}/start")
+
+        r = client.post(
+            f"/api/import/batches/{batch['id']}/files",
+            files={"file": ("02.flac", b"x" * 64, "audio/flac")},
+        )
+        assert r.status_code == 409
+
+    def test_discarding_removes_the_batch(self, client):
+        batch = client.post("/api/import/batches").json()
+        client.post(
+            f"/api/import/batches/{batch['id']}/files",
+            files={"file": ("01.flac", b"x" * 64, "audio/flac")},
+        )
+        assert client.delete(f"/api/import/batches/{batch['id']}").status_code == 204
+        assert client.get(f"/api/import/batches/{batch['id']}").status_code == 404
+
+    def test_listing_is_newest_first(self, client):
+        for _ in range(3):
+            client.post("/api/import/batches")
+        rows = client.get("/api/import/batches").json()
+        assert len(rows) == 3
+        assert [r["created_at"] for r in rows] == sorted(
+            (r["created_at"] for r in rows), reverse=True
+        )
