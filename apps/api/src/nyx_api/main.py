@@ -61,7 +61,14 @@ app = FastAPI(title="Nyx API", version="0.1.0", lifespan=lifespan)
 def health(request: Request) -> dict:
     conn = request.app.state.db
     count = conn.execute("SELECT COUNT(*) AS n FROM plays").fetchone()["n"]
-    return {"ok": True, "plays": count, "db": str(DB_PATH)}
+    return {
+        "ok": True,
+        "plays": count,
+        "db": str(DB_PATH),
+        # Deployment compares this against HEAD. An image built before this
+        # existed reports "unknown", which correctly reads as stale.
+        "commit": os.environ.get("NYX_COMMIT", "unknown"),
+    }
 
 
 @app.post("/api/plays", status_code=201)

@@ -100,6 +100,9 @@ export function Settings({ onSignOut }: { onSignOut: () => void }) {
         </Section>
 
         <Section title="About">
+          <Row label="Build" hint="the commit this client was built from">
+            <Pill>{__NYX_COMMIT__}</Pill>
+          </Row>
           <Row label="Library" hint="scanned by navidrome">
             <Pill>{stats.albums} albums · {stats.tracks} tracks</Pill>
           </Row>

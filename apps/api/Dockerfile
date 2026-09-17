@@ -41,6 +41,11 @@ USER 1000
 
 COPY beets-pi.yaml /config/beets.yaml
 
+# Late in the file on purpose: a new commit invalidates only the layers after
+# this, not the apt and dependency layers that make the build slow.
+ARG NYX_COMMIT=unknown
+ENV NYX_COMMIT=$NYX_COMMIT
+
 ENV PATH="/app/.venv/bin:$PATH" \
     NYX_DB=/data/nyx.db \
     NYX_IMPORT_DIR=/import \

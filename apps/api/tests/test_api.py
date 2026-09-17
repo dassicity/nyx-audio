@@ -49,6 +49,13 @@ def event(**over):
     return payload
 
 
+def test_health_reports_the_build(client, monkeypatch):
+    # Deployment decides whether to rebuild by asking this, so it must always
+    # be present — "unknown" is a real answer meaning "rebuild me".
+    body = client.get("/api/health").json()
+    assert "commit" in body and body["commit"]
+
+
 class TestPlays:
     def test_records_and_counts(self, client):
         assert client.get("/api/health").json()["plays"] == 0

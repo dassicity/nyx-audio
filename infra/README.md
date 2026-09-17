@@ -131,12 +131,28 @@ client only ever calls relative paths.
 
 ### From git, on the server
 
+Once, so the server can build the client itself:
+
+```bash
+cd ~/nyx-audio/infra && ./setup-node.sh
+```
+
+Then, every time:
+
 ```bash
 cd ~/nyx-audio/infra && ./deploy.sh
 ```
 
-Pulls, rebuilds only what changed, publishes the client bundle, reconciles
-Caddy, and verifies both the client and the API answer.
+It asks the running client (`/version.json`) and API (`/api/health`) which
+commit they were built from, rebuilds whichever is behind HEAD, fixes
+directory ownership, reconciles Caddy, and verifies. It exits non-zero and
+lists what is wrong if anything is left stale — it will not print "Done" over
+an old build.
+
+It does not matter whether you `git pull` first. An earlier version decided
+what to rebuild from what that particular run had pulled, so pulling first
+rebuilt nothing and then reported success. Asking the running services removes
+that whole class of mistake. The build is also shown in Settings → About.
 
 This needs no exclude list, because **everything machine-specific is
 gitignored** — `.env`, `caddy/certs/`, `caddy/conf.d/tailscale.caddy`,
