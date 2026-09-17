@@ -40,7 +40,21 @@ RUN useradd --create-home --uid 1000 nyx || true
 USER 1000
 
 COPY beets-pi.yaml /config/beets.yaml
-COPY beets-interactive.yaml /config/interactive.yaml
+
+# An interactive variant for resolving quarantine by hand, GENERATED from the
+# automatic one rather than maintained beside it.
+#
+# It has to be a complete, standalone config: beets does not merge a second
+# -c over the first, and its include: directive did not apply either. Passing
+# two configs silently drops the first, which sends the library to beets'
+# default path instead of /music — files land inside the container, invisible
+# to Navidrome, and vanish on the next rebuild.
+RUN /app/.venv/bin/python -c "\
+import yaml; \
+c = yaml.safe_load(open('/config/beets.yaml')); \
+c['import'].update({'quiet': False, 'timid': False, 'duplicate_action': 'ask'}); \
+yaml.safe_dump(c, open('/config/interactive.yaml', 'w'), sort_keys=False, allow_unicode=True)"
+
 
 # Late in the file on purpose: a new commit invalidates only the layers after
 # this, not the apt and dependency layers that make the build slow.

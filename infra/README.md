@@ -185,6 +185,34 @@ Either works; `deploy.sh` detects which applies and says so.
 
 ---
 
+## Resolving quarantine by hand
+
+Files beets would not match confidently are held at
+`$DATA_DIR/import/quarantine/<batch-id>` rather than filed under a guess. To
+make the call yourself:
+
+```bash
+docker compose exec -it nyx-api beet -c /config/interactive.yaml import /import/quarantine/<batch-id>
+```
+
+**One `-c`, and it must be `interactive.yaml`.** beets does not merge a second
+`-c` over the first, and its `include:` directive did not apply either —
+passing two configs silently drops the first, which sends the library to
+beets' default path. Files then land inside the container, invisible to
+Navidrome, and disappear on the next rebuild. `interactive.yaml` is generated
+from `beets.yaml` at image build time precisely so it is complete on its own.
+
+Afterwards, trigger a rescan — from the Import screen, or:
+
+```bash
+curl "http://localhost/rest/startScan.view?u=USER&p=PASS&v=1.16.1&c=nyx&f=json"
+```
+
+Navidrome only notices new files when it scans. Nothing appears in the Albums
+pane until then, however correctly beets filed it.
+
+---
+
 ## Operating notes
 
 - **The music mount is read-only** (`/srv/music:/music:ro`). Deliberate: a bug
