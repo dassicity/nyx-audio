@@ -263,3 +263,47 @@ def test_quiet_flag_is_present():
     cmd = importer.beets_command(Path("/cfg.yaml"), Path("/staging/abc"))
     assert "-q" in cmd
     assert cmd[0] == "beet"
+
+
+class TestRelativePaths:
+    """Keeping the album folder is what lets beets recognise a release.
+
+    Flattening a dropped folder turns a compilation into a pile of unrelated
+    tracks, and MusicBrainz cannot match that.
+    """
+
+    def test_keeps_the_album_folder(self):
+        assert importer.safe_relpath("The Rough Guide to Asia/01 Zulya.flac") == \
+            "The Rough Guide to Asia/01 Zulya.flac"
+
+    def test_caps_the_depth(self):
+        # A deep drop must not build an arbitrary tree on the server.
+        assert importer.safe_relpath("a/b/c/d/Album/02 Track.flac") == "Album/02 Track.flac"
+
+    def test_a_bare_filename_still_works(self):
+        assert importer.safe_relpath("01 Plain.flac") == "01 Plain.flac"
+
+    @pytest.mark.parametrize("attack", [
+        "../../etc/passwd/evil.flac",
+        "../../../../../../root/.ssh/authorized_keys.flac",
+        "Album/../../../escape.flac",
+        "/absolute/Album/x.flac",
+    ])
+    def test_no_traversal_survives(self, attack, tmp_path):
+        rel = importer.safe_relpath(attack)
+        assert ".." not in rel.split("/")
+        # And the resolved destination is still inside the batch.
+        (tmp_path / "b").mkdir()
+        assert importer.staging_path(tmp_path, "b", rel).is_relative_to(
+            (tmp_path / "b").resolve())
+
+    def test_preserves_diacritics_in_folders(self):
+        assert importer.safe_relpath("Cesária Évora/01 Sodade.flac") == \
+            "Cesária Évora/01 Sodade.flac"
+
+    def test_windows_separators(self):
+        assert importer.safe_relpath(r"Album\02 Track.flac") == "Album/02 Track.flac"
+
+    def test_rejects_a_path_that_reduces_to_nothing(self):
+        with pytest.raises(RejectedUpload):
+            importer.safe_relpath("../..")

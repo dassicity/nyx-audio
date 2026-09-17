@@ -40,6 +40,7 @@ RUN useradd --create-home --uid 1000 nyx || true
 USER 1000
 
 COPY beets-pi.yaml /config/beets.yaml
+COPY beets-interactive.yaml /config/interactive.yaml
 
 # Late in the file on purpose: a new commit invalidates only the layers after
 # this, not the apt and dependency layers that make the build slow.

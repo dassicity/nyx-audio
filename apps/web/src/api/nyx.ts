@@ -157,6 +157,11 @@ export function uploadFile(
   return new Promise((resolve, reject) => {
     const form = new FormData()
     form.append('file', file)
+    // The album folder, when the browser gives us one. beets groups a release
+    // by directory, so flattening the drop loses the strongest hint about
+    // what the album actually is.
+    const relative = (file as File & { webkitRelativePath?: string }).webkitRelativePath
+    if (relative) form.append('relative_path', relative)
 
     const xhr = new XMLHttpRequest()
     xhr.open('POST', `/api/import/batches/${batchId}/files`)

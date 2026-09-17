@@ -43,6 +43,42 @@ def new_batch_id() -> str:
     return secrets.token_hex(8)
 
 
+def safe_relpath(raw: str, depth: int = 2) -> str:
+    """Sanitise a browser-supplied relative path, keeping its folder.
+
+    A dropped folder arrives as 'Album Name/01 Track.flac'. Keeping that
+    structure matters: beets groups an album by directory, and the folder name
+    is frequently the best hint about what the release is. Flattening
+    everything into one directory turns a compilation into eleven unrelated
+    files and MusicBrainz cannot match it.
+
+    Depth is capped so a deeply nested drop cannot build an arbitrary tree.
+    """
+    normalised = raw.replace("\\", "/")
+    parts = [p for p in normalised.split("/") if p not in ("", ".", "..")]
+    if not parts:
+        raise RejectedUpload("file has no usable name")
+
+    name = safe_filename(parts[-1])
+
+    # A genuine folder drop never contains '..' or a leading '/'. When one
+    # does, keep the filename and discard the directories: the path is not
+    # trustworthy enough to take naming advice from, even though
+    # staging_path would confine it anyway.
+    if ".." in normalised.split("/") or normalised.startswith("/"):
+        return name
+    folders = [safe_component(p) for p in parts[-depth:-1]]
+    folders = [f for f in folders if f]
+    return "/".join([*folders, name])
+
+
+def safe_component(raw: str) -> str:
+    """One path segment, with every separator and control character removed."""
+    part = unicodedata.normalize("NFC", raw.replace("\\", "/").replace("/", "_"))
+    part = _UNSAFE.sub("_", part).strip().strip(".")
+    return part[:120]
+
+
 def safe_filename(raw: str) -> str:
     """Reduce a browser-supplied filename to something safe to write.
 

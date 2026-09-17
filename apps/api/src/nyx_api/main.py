@@ -16,7 +16,9 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import BackgroundTasks, FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi import (
+    BackgroundTasks, FastAPI, File, Form, HTTPException, Query, Request, UploadFile,
+)
 
 from . import db
 from . import importer
@@ -146,7 +148,10 @@ def create_batch(request: Request) -> dict:
 
 @app.post("/api/import/batches/{batch_id}/files", status_code=201)
 async def upload_file(
-    batch_id: str, request: Request, file: UploadFile = File(...)
+    batch_id: str,
+    request: Request,
+    file: UploadFile = File(...),
+    relative_path: str = Form(default=""),
 ) -> dict:
     conn = request.app.state.db
     batch = importer.get_batch(conn, batch_id)
@@ -158,7 +163,10 @@ async def upload_file(
         raise HTTPException(413, f"a batch holds at most {importer.MAX_BATCH_FILES} files")
 
     try:
-        name = importer.safe_filename(file.filename or "")
+        # Prefer the relative path: it carries the album folder, which is what
+        # lets beets recognise a release rather than a pile of loose tracks.
+        raw = relative_path or file.filename or ""
+        name = importer.safe_relpath(raw)
         importer.check_extension(name)
         target = importer.staging_path(STAGING_ROOT, batch_id, name)
     except importer.RejectedUpload as exc:
