@@ -35,10 +35,10 @@ RUN uv sync --frozen --no-install-project --no-dev 2>/dev/null \
 COPY src ./src
 RUN uv sync --no-dev
 
-# Runs unprivileged; /data is a bind mount owned by the host user.
-RUN useradd --create-home --uid 1000 nyx || true
-USER 1000
-
+# Configuration is written as root, BEFORE dropping privileges. COPY creates
+# /config owned by root regardless of USER, so anything that writes into it
+# must run first — the generation step below failed with EACCES when it ran
+# after `USER 1000`. The app only ever reads these files.
 COPY beets-pi.yaml /config/beets.yaml
 
 # An interactive variant for resolving quarantine by hand, GENERATED from the
@@ -58,6 +58,11 @@ yaml.safe_dump(c, open('/config/interactive.yaml', 'w'), sort_keys=False, allow_
 
 # Late in the file on purpose: a new commit invalidates only the layers after
 # this, not the apt and dependency layers that make the build slow.
+
+# Runs unprivileged; /data is a bind mount owned by the host user.
+RUN useradd --create-home --uid 1000 nyx || true
+USER 1000
+
 ARG NYX_COMMIT=unknown
 ENV NYX_COMMIT=$NYX_COMMIT
 
