@@ -123,13 +123,59 @@ export interface ImportFile {
   status: 'uploaded' | 'imported' | 'quarantined'
 }
 
+export interface Candidate {
+  id: string
+  name: string
+  distance: number
+  similarity: number
+}
+
+export interface Resolution {
+  action: 'accept' | 'asis' | 'discard'
+  outcome: ResolveOutcome
+  message: string | null
+  release_id: string | null
+  at: string
+}
+
 /** beets' reasoning for one album, summarised from its verbose output. */
 export interface AlbumDecision {
   album: string
+  /** Where the files are, relative to the batch. Null for albums that filed. */
+  folder: string | null
   best_match: string | null
   distance: number | null
   similarity: number | null
   decision: 'imported' | 'held' | 'unknown'
+  candidates: Candidate[]
+  resolution: Resolution | null
+}
+
+export type ResolveOutcome = 'filed' | 'duplicate' | 'held' | 'discarded' | 'failed'
+
+export interface ResolveRequest {
+  folder: string
+  action: 'accept' | 'asis' | 'discard'
+  release?: string
+  keep_duplicate?: boolean
+}
+
+/** A person's decision about one held album. Waits for beets to finish:
+ *  a deliberate click on one album, and the answer is worth waiting for. */
+export async function resolveAlbum(
+  batchId: string, body: ResolveRequest,
+): Promise<{ outcome: ResolveOutcome; message: string; log: string }> {
+  const res = await fetch(`/api/import/batches/${batchId}/resolve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    let detail = `could not resolve (${res.status})`
+    try { detail = (await res.json()).detail ?? detail } catch { /* keep */ }
+    throw new Error(detail)
+  }
+  return res.json()
 }
 
 export interface ImportBatch {

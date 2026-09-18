@@ -28,6 +28,11 @@ paths:
 # serious collection — Cesária Évora, Górecki, Ali Farka Touré.
 asciify_paths: no
 
+# Output goes to a log shown in a browser, not a terminal. Colour codes arrive
+# there as '[1;34m' noise.
+ui:
+  color: no
+
 import:
   copy: no
   move: yes

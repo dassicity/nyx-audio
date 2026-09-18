@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ApiUnavailable, createBatch, getBatch, listBatches, startBatch, uploadFile,
 } from '../api/nyx.js'
-import type { AlbumDecision, BatchStatus } from '../api/nyx.js'
+import type { AlbumDecision, BatchStatus, ResolveOutcome } from '../api/nyx.js'
+import { ResolveAlbum } from '../components/ResolveAlbum.js'
 import { useClient } from '../api/context.js'
 import { Screen, ScreenHeader, Placeholder } from '../components/Screen.js'
 import { px } from '../format.js'
@@ -106,6 +107,14 @@ export function Import() {
     await fetch(client.url('startScan.view'))
     void queryClient.invalidateQueries({ queryKey: ['albums'] })
     void queryClient.invalidateQueries({ queryKey: ['artists'] })
+  }
+
+  async function afterResolve(outcome: ResolveOutcome) {
+    void queryClient.invalidateQueries({ queryKey: ['import', 'batch', activeId] })
+    void queryClient.invalidateQueries({ queryKey: ['import', 'batches'] })
+    // Filed by hand means new files in the library. Navidrome only notices on
+    // a scan, and asking you to click a second button for it is pointless.
+    if (outcome === 'filed') await rescan()
   }
 
   const done = active.data?.status === 'imported' || active.data?.status === 'partial'
@@ -243,7 +252,14 @@ export function Import() {
 
           {(active.data.albums?.length ?? 0) > 0 && (
             <div style={{ marginTop: 'var(--nyx-s-5)', display: 'grid', gap: 10 }}>
-              {active.data.albums!.map((a, i) => <Decision key={i} album={a} />)}
+              {active.data.albums!.map((a, i) => (
+                <Decision
+                  key={`${a.folder ?? ''}-${i}`}
+                  album={a}
+                  batchId={active.data!.id}
+                  onResolved={(outcome) => void afterResolve(outcome)}
+                />
+              ))}
             </div>
           )}
 
@@ -320,8 +336,12 @@ export function Import() {
 }
 
 /** One album: what beets thought it was, how sure it was, what it did. */
-function Decision({ album }: { album: AlbumDecision }) {
-  const filed = album.decision === 'imported'
+function Decision(
+  { album, batchId, onResolved }:
+  { album: AlbumDecision; batchId: string; onResolved: (o: ResolveOutcome) => void },
+) {
+  const resolvedByHand = album.resolution?.outcome === 'filed'
+  const filed = album.decision === 'imported' || resolvedByHand
   return (
     <div style={{
       display: 'grid', gridTemplateColumns: '14px 1fr auto', gap: 12,
@@ -348,9 +368,16 @@ function Decision({ album }: { album: AlbumDecision }) {
       }}>
         {album.similarity !== null ? `${album.similarity}%` : '—'}
         <span style={{ color: 'var(--nyx-txt-3)' }}>
-          {filed ? ' · filed' : ' · held, needs 96%'}
+          {resolvedByHand ? ' · filed by hand' : filed ? ' · filed' : ' · held, needs 96%'}
         </span>
       </span>
+
+      {/* Held albums with a known location can be decided right here. */}
+      {album.decision === 'held' && album.folder !== null && (
+        <div style={{ gridColumn: '1 / -1' }}>
+          <ResolveAlbum batchId={batchId} album={album} onResolved={onResolved} />
+        </div>
+      )}
     </div>
   )
 }

@@ -24,6 +24,8 @@ from . import db
 from . import importer
 from . import lyrics as lyrics_mod
 from . import stats as stats_mod
+from pydantic import BaseModel
+
 from .models import Lyrics, PlayEvent, Stats
 
 DB_PATH = Path(os.environ.get("NYX_DB", "/data/nyx.db"))
@@ -211,6 +213,34 @@ def start_batch(batch_id: str, request: Request, tasks: BackgroundTasks) -> dict
         conn, batch_id, STAGING_ROOT, QUARANTINE_ROOT, BEETS_CONFIG,
     )
     return {"started": True, "files": len(batch["files"])}
+
+
+class Resolution(BaseModel):
+    folder: str = ""
+    action: str
+    release: str | None = None
+    keep_duplicate: bool = False
+
+
+@app.post("/api/import/batches/{batch_id}/resolve")
+def resolve_album(batch_id: str, body: Resolution, request: Request) -> dict:
+    """A person's decision about one held album.
+
+    Synchronous by design: it is one album, a deliberate click, and the answer
+    is worth waiting for. FastAPI runs it in a worker thread, so the rest of
+    the API keeps answering meanwhile.
+    """
+    conn = request.app.state.db
+    if importer.get_batch(conn, batch_id) is None:
+        raise HTTPException(404, "no such batch")
+    try:
+        return importer.resolve(
+            conn, batch_id, body.folder, body.action,
+            QUARANTINE_ROOT, BEETS_CONFIG,
+            release_id=body.release, keep_duplicate=body.keep_duplicate,
+        )
+    except importer.RejectedUpload as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @app.get("/api/import/batches")

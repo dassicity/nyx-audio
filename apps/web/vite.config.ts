@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
 /**
@@ -22,7 +22,13 @@ function commit(): string {
 
 const COMMIT = commit()
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // loadEnv with an empty prefix reads .env.local's NYX_* values. Reading
+  // process.env alone meant the documented .env.local never took effect.
+  const env = loadEnv(mode, process.cwd(), '')
+  const server = env.NYX_SERVER ?? 'http://nyx.local'
+
+  return {
   plugins: [
     react(),
     {
@@ -44,11 +50,12 @@ export default defineConfig({
     // development too, and keeps credentials off the query string of a
     // cross-origin request.
     proxy: {
-      '/rest': {
-        target: process.env.NYX_SERVER ?? 'http://nyx.local',
-        changeOrigin: true,
-      },
+      '/rest': { target: server, changeOrigin: true },
+      // nyx-api. Defaults to the same server; NYX_API points it at a local
+      // uvicorn when working on the API itself.
+      '/api': { target: env.NYX_API ?? server, changeOrigin: true },
     },
   },
   build: { outDir: 'dist', sourcemap: true },
+  }
 })

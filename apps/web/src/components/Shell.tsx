@@ -72,7 +72,11 @@ export function Shell() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         <Sidebar />
-        <main style={{ flex: 1, minWidth: 0, position: 'relative', overflow: 'hidden' }}>
+        {/* overflow: clip, NOT hidden. The closed queue panel sits just past
+            the right edge, and `hidden` still makes <main> a scroll container:
+            any scrollIntoView or focus could slide the whole page sideways,
+            under the sidebar. `clip` cuts off the same way and cannot scroll. */}
+        <main style={{ flex: 1, minWidth: 0, position: 'relative', overflow: 'clip' }}>
           <div
             aria-hidden
             style={{

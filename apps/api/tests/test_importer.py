@@ -200,7 +200,7 @@ class TestRunImport:
         importer.add_file(conn, bid, "unmatched.flac", 32)
 
         class Done:
-            stdout, stderr, returncode = "skipped", "", 0
+            stdout, stderr, returncode = "Tagging A - B\nSkipping.\n", "", 0
 
         monkeypatch.setattr(importer.subprocess, "run", lambda *a, **k: Done())
 
@@ -326,7 +326,7 @@ class TestQuarantineBookkeeping:
         importer.add_file(conn, bid, "1981 - Fresh Breeze/cover.jpg", 8)
 
         class Skipped:
-            stdout = "Tagging A - B\nSkipping.\n"
+            stdout, returncode = "Tagging A - B\nSkipping.\n", 0
 
         monkeypatch.setattr(importer.subprocess, "run", lambda *a, **k: Skipped())
         result = importer.run_import(
@@ -350,7 +350,7 @@ class TestQuarantineBookkeeping:
         importer.add_file(conn, bid, "Album/cover.jpg", 1)
 
         class Held:
-            stdout = "Skipping.\n"
+            stdout, returncode = "Tagging A - B\nSkipping.\n", 0
 
         monkeypatch.setattr(importer.subprocess, "run", lambda *a, **k: Held())
         result = importer.run_import(
@@ -416,3 +416,166 @@ def test_the_automatic_config_does_not_fingerprint():
     cfg = yaml.safe_load((Path(__file__).parent.parent / "beets-pi.yaml").read_text())
     assert "chroma" not in cfg["plugins"].split()
     assert isinstance(cfg["fetchart"]["sources"], list)
+
+
+class TestFailureIsNotAMatchingDecision:
+    """Regression: a beets that never ran reported every file as 'held — no
+    confident match', sending someone hunting for a tagging problem that did
+    not exist."""
+
+    PROMPT = ("Loading plugins: musicbrainz\n"
+              "The database directory /x does not exist. Create it (Y/n)? "
+              "error: stdin stream ended while input required\n")
+
+    def test_a_beets_that_never_ran_is_reported_as_failed(self, conn, tmp_path, monkeypatch):
+        bid = importer.new_batch_id()
+        importer.create_batch(conn, bid)
+        album = tmp_path / "staging" / bid / "Album"
+        album.mkdir(parents=True)
+        (album / "01.mp3").write_bytes(b"x")
+        importer.add_file(conn, bid, "Album/01.mp3", 1)
+
+        class NeverRan:
+            stdout, returncode = TestFailureIsNotAMatchingDecision.PROMPT, 1
+
+        monkeypatch.setattr(importer.subprocess, "run", lambda *a, **k: NeverRan())
+        result = importer.run_import(
+            conn, bid, tmp_path / "staging", tmp_path / "quarantine", Path("/c.yaml"))
+
+        batch = importer.get_batch(conn, bid)
+        assert result["status"] == "failed" and batch["status"] == "failed"
+        assert "stdin stream ended" in batch["message"]
+        assert "no confident match" not in batch["message"]
+        # Nothing was quarantined: the files wait in staging for a retry.
+        assert (album / "01.mp3").exists()
+        assert not (tmp_path / "quarantine" / bid).exists()
+
+    def test_beets_error_extracts_the_reason(self):
+        assert importer.beets_error(self.PROMPT) == "stdin stream ended while input required"
+        assert importer.beets_error("Tagging A - B\nSkipping.\n") is None
+
+    def test_beets_is_never_left_waiting_for_input(self, conn, tmp_path, monkeypatch):
+        bid = importer.new_batch_id()
+        importer.create_batch(conn, bid)
+        (tmp_path / "staging" / bid).mkdir(parents=True)
+        (tmp_path / "staging" / bid / "01.mp3").write_bytes(b"x")
+        seen = {}
+
+        class Ok:
+            stdout, returncode = "Tagging A - B\nSkipping.\n", 0
+
+        def capture(*a, **k):
+            seen.update(k)
+            return Ok()
+
+        monkeypatch.setattr(importer.subprocess, "run", capture)
+        importer.run_import(conn, bid, tmp_path / "staging", tmp_path / "quarantine", Path("/c"))
+        assert seen.get("stdin") is importer.subprocess.DEVNULL
+
+
+class TestResolveHelpers:
+    @pytest.mark.parametrize("pasted", [
+        "5db56475-7801-4bfc-9cb6-3f330c9a3746",
+        "https://musicbrainz.org/release/5db56475-7801-4bfc-9cb6-3f330c9a3746",
+        "https://musicbrainz.org/release/5DB56475-7801-4BFC-9CB6-3F330C9A3746/",
+        "  musicbrainz.org/release/5db56475-7801-4bfc-9cb6-3f330c9a3746?tab=x ",
+    ])
+    def test_release_id_from_whatever_gets_pasted(self, pasted):
+        assert importer.release_id_from(pasted) == "5db56475-7801-4bfc-9cb6-3f330c9a3746"
+
+    @pytest.mark.parametrize("junk", ["", "not an id", "https://musicbrainz.org/", "5db56475"])
+    def test_rejects_anything_without_a_release_id(self, junk):
+        with pytest.raises(RejectedUpload):
+            importer.release_id_from(junk)
+
+    def test_duplicate_is_detected_from_real_quiet_mode_output(self):
+        # Verbatim from a beets 2.14 run where the FLAC edition was already filed.
+        assert importer._DUPLICATE.search("found duplicates: [1]\ndefault action for duplicates: s")
+        assert not importer._DUPLICATE.search("found duplicates: []")
+        assert not importer._DUPLICATE.search("Tagging A - B\nSkipping.")
+
+    def test_a_forced_choice_opens_both_gates(self, tmp_path):
+        base = tmp_path / "b.yaml"
+        base.write_text((Path(__file__).parent.parent / "beets-pi.yaml").read_text())
+        cfg = importer.resolve_config(base, forced=True, keep_duplicate=False)
+        assert cfg["match"]["strong_rec_thresh"] == 1.0
+        assert set(cfg["match"]["max_rec"].values()) == {"strong"}
+        assert cfg["import"]["duplicate_action"] == "skip"
+
+    def test_keep_both_only_when_asked(self, tmp_path):
+        base = tmp_path / "b.yaml"
+        base.write_text((Path(__file__).parent.parent / "beets-pi.yaml").read_text())
+        assert importer.resolve_config(base, forced=False, keep_duplicate=True)["import"]["duplicate_action"] == "keep"
+        # "Keep my tags" does not lower the bar on anything beets decides.
+        assert importer.resolve_config(base, forced=False, keep_duplicate=False)["match"]["strong_rec_thresh"] == 0.04
+
+    def test_the_command_for_each_action(self):
+        accept = importer.resolve_command(Path("/c"), Path("/q/A"), "accept", "abc")
+        asis = importer.resolve_command(Path("/c"), Path("/q/A"), "asis", None)
+        assert ["-S", "abc"] == accept[accept.index("-S"):accept.index("-S") + 2]
+        assert "-A" in asis and "-S" not in asis
+
+    def test_folder_must_stay_inside_the_batch(self, tmp_path):
+        (tmp_path / "b1" / "Album").mkdir(parents=True)
+        assert importer.quarantined_folder(tmp_path, "b1", "Album").name == "Album"
+        for bad in ["../..", "/etc", "Album/../../.."]:
+            with pytest.raises(RejectedUpload):
+                importer.quarantined_folder(tmp_path, "b1", bad)
+
+    def test_summary_carries_folder_and_candidate_ids(self):
+        log = ("Tagging Ancient Future - Putumayo\n"
+               "Candidate: VA - Tea Lands (5db56475-7801-4bfc-9cb6-3f330c9a3746) from MusicBrainz\n"
+               "Success. Distance: 0.18\n"
+               "Candidate: VA - Wine Lands (67784dab-b80f-4782-a7c8-611d2998c02a) from MusicBrainz\n"
+               "Success. Distance: 0.66\n"
+               "\x1b[1;34m/import/staging/b9/Putumayo Presents\x1b[39;49;00m \x1b[1;34m(6 items)\x1b[39;49;00m\n"
+               "Skipping.\n")
+        album = importer.summarise(log, "b9")[0]
+        assert album["folder"] == "Putumayo Presents"          # colour codes stripped
+        assert [c["id"][:8] for c in album["candidates"]] == ["5db56475", "67784dab"]
+        assert album["candidates"][0]["similarity"] == 82.0
+
+
+def test_a_resolution_does_not_duplicate_the_album(conn, tmp_path, monkeypatch):
+    """Regression, seen in a browser: resolving appended beets' second run to
+    the log, the summariser parsed both runs, and the album appeared twice."""
+    bid = importer.new_batch_id()
+    importer.create_batch(conn, bid)
+    album = tmp_path / "staging" / bid / "Album"
+    album.mkdir(parents=True)
+    (album / "01.mp3").write_bytes(b"x")
+    importer.add_file(conn, bid, "Album/01.mp3", 1)
+
+    auto_log = (f"Tagging A - B\nCandidate: X (5db56475-7801-4bfc-9cb6-3f330c9a3746) from MusicBrainz\n"
+                f"Success. Distance: 0.18\n/import/staging/{bid}/Album (1 items)\nSkipping.\n")
+
+    class Auto:
+        stdout, returncode = auto_log, 0
+
+    monkeypatch.setattr(importer.subprocess, "run", lambda *a, **k: Auto())
+    importer.run_import(conn, bid, tmp_path / "staging", tmp_path / "q", Path("/c"))
+    assert len(importer.get_batch(conn, bid)["albums"]) == 1
+
+    manual_log = (f"Tagging A - B\nCandidate: X (5db56475-7801-4bfc-9cb6-3f330c9a3746) from MusicBrainz\n"
+                  f"Success. Distance: 0.18\n/q/{bid}/Album (1 items)\n")
+
+    class Manual:
+        stdout, returncode = manual_log, 0
+
+    def filed(*a, **k):
+        for p in (tmp_path / "q" / bid / "Album").glob("*.mp3"):
+            p.unlink()                       # beets moved it into the library
+        return Manual()
+
+    monkeypatch.setattr(importer.subprocess, "run", filed)
+    base = tmp_path / "b.yaml"
+    base.write_text((Path(__file__).parent.parent / "beets-pi.yaml").read_text())
+    out = importer.resolve(conn, bid, "Album", "accept", tmp_path / "q", base,
+                           release_id="5db56475-7801-4bfc-9cb6-3f330c9a3746")
+
+    batch = importer.get_batch(conn, bid)
+    assert out["outcome"] == "filed"
+    assert len(batch["albums"]) == 1
+    assert batch["albums"][0]["resolution"]["outcome"] == "filed"
+    assert batch["status"] == "imported"
+    assert "resolved by hand" in batch["log"]     # both runs still readable
