@@ -16,13 +16,15 @@ ENV UV_COMPILE_BYTECODE=1 \
 # beets shells out to all of these:
 #   ffmpeg      ReplayGain scanning
 #   libchromaprint-tools  fpcalc, for acoustic fingerprinting
-#   flac        the badfiles plugin uses it to detect corrupt files
+#   flac        the badfiles plugin uses it to check FLAC files
+#   mp3val      ...and this to check MP3s; without it, every MP3 logs
+#               'command not found' and goes unchecked
 #   imagemagick cover art resizing
 # This roughly triples the image, which is the price of importing from a
 # browser instead of an ssh session.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        ffmpeg libchromaprint-tools flac imagemagick \
+        ffmpeg libchromaprint-tools flac mp3val imagemagick \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -53,6 +55,7 @@ RUN /app/.venv/bin/python -c "\
 import yaml; \
 c = yaml.safe_load(open('/config/beets.yaml')); \
 c['import'].update({'quiet': False, 'timid': False, 'duplicate_action': 'ask'}); \
+c['plugins'] = c['plugins'].strip() + ' chroma'; \
 yaml.safe_dump(c, open('/config/interactive.yaml', 'w'), sort_keys=False, allow_unicode=True)"
 
 

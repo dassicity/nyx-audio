@@ -44,9 +44,19 @@ import:
   # already own should be a no-op, not a second copy.
   duplicate_action: skip
 
+# No `chroma` here — measured, not assumed. Acoustic fingerprinting links each
+# song to its ORIGINAL release, so on a compilation every track takes an
+# ID-mismatch penalty. Reproduced against a real Putumayo compilation:
+#
+#   with chroma     best distance 0.13  -> medium -> quiet mode skips
+#   without chroma  best distance 0.03  -> strong -> imported correctly
+#
+# Quiet mode files only "strong" matches (<= 0.04), so chroma was silently
+# quarantining correctly-tagged compilations. It is kept in the interactive
+# config, where a person reviews the result and fingerprinting earns its keep
+# on files with missing tags.
 plugins: >
   musicbrainz
-  chroma
   fetchart
   replaygain
   scrub
@@ -54,8 +64,8 @@ plugins: >
   duplicates
 
 musicbrainz:
-  # A weaker match than this is exactly what quarantine exists for.
-  searchlimit: 5
+  # `searchlimit` is the deprecated spelling in beets 2.x.
+  search_limit: 5
 
 match:
   # Anything above this is applied automatically; anything below is skipped.
@@ -68,7 +78,14 @@ match:
 
 fetchart:
   auto: yes
-  sources: filesystem coverart itunes albumart
+  # Must be a YAML list. A space-separated string is read as ONE source named
+  # "filesystem coverart itunes albumart", and the plugin fails to load —
+  # silently, from the import's point of view: no cover art, no error shown.
+  sources:
+    - filesystem
+    - coverart
+    - itunes
+    - albumart
 
 replaygain:
   auto: yes

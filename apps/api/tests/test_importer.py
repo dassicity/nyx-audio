@@ -307,3 +307,112 @@ class TestRelativePaths:
     def test_rejects_a_path_that_reduces_to_nothing(self):
         with pytest.raises(RejectedUpload):
             importer.safe_relpath("../..")
+
+
+class TestQuarantineBookkeeping:
+    def test_nested_leftovers_are_recorded_under_their_real_path(self, conn, tmp_path, monkeypatch):
+        """Regression: uploads are stored as 'Album/01 Track.mp3', and the
+        quarantine step matched on bare filenames. No row was marked
+        quarantined, so every held file was then reported as imported and the
+        review list came back empty.
+        """
+        bid = importer.new_batch_id()
+        importer.create_batch(conn, bid)
+        album = tmp_path / "staging" / bid / "1981 - Fresh Breeze"
+        album.mkdir(parents=True)
+        (album / "01 Itni Muddat.mp3").write_bytes(b"x" * 32)
+        (album / "cover.jpg").write_bytes(b"y" * 8)
+        importer.add_file(conn, bid, "1981 - Fresh Breeze/01 Itni Muddat.mp3", 32)
+        importer.add_file(conn, bid, "1981 - Fresh Breeze/cover.jpg", 8)
+
+        class Skipped:
+            stdout = "Tagging A - B\nSkipping.\n"
+
+        monkeypatch.setattr(importer.subprocess, "run", lambda *a, **k: Skipped())
+        result = importer.run_import(
+            conn, bid, tmp_path / "staging", tmp_path / "quarantine", Path("/c.yaml"))
+
+        statuses = {f["name"]: f["status"] for f in importer.get_batch(conn, bid)["files"]}
+        assert statuses["1981 - Fresh Breeze/01 Itni Muddat.mp3"] == "quarantined"
+        assert result == {"status": "partial", "imported": 0, "quarantined": 1}
+        # The album folder survives into quarantine, so it can be re-imported
+        # as an album rather than as loose files.
+        assert (tmp_path / "quarantine" / bid / "1981 - Fresh Breeze" / "01 Itni Muddat.mp3").exists()
+
+    def test_cover_art_is_not_counted_as_an_imported_track(self, conn, tmp_path, monkeypatch):
+        bid = importer.new_batch_id()
+        importer.create_batch(conn, bid)
+        album = tmp_path / "staging" / bid / "Album"
+        album.mkdir(parents=True)
+        (album / "01.flac").write_bytes(b"x")
+        (album / "cover.jpg").write_bytes(b"y")
+        importer.add_file(conn, bid, "Album/01.flac", 1)
+        importer.add_file(conn, bid, "Album/cover.jpg", 1)
+
+        class Held:
+            stdout = "Skipping.\n"
+
+        monkeypatch.setattr(importer.subprocess, "run", lambda *a, **k: Held())
+        result = importer.run_import(
+            conn, bid, tmp_path / "staging", tmp_path / "quarantine", Path("/c.yaml"))
+        assert result["imported"] == 0 and result["quarantined"] == 1
+
+
+# Real beets 2.14 `-v` output, trimmed. Two albums: one weak match that is
+# skipped, one strong match that is filed.
+REAL_LOG = """\
+Tagging Dilraj Kaur - Fresh Breeze: Ghazals to Caress You
+Candidate: Dilraj Kaur - Fresh Breeze (7ff41911-28f6-4079-bf08-85f9a9e6e928) from MusicBrainz
+Success. Distance: 0.45
+Candidate: Tony Chen - Fresh Breeze (317990f7-3331-4813-893c-13c791d15f61) from MusicBrainz
+Success. Distance: 0.78
+Skipping.
+** error loading plugin fetchart
+Tagging Various Artists - Putumayo presents Music from the Tea Lands
+Candidate: Various Artists - Putumayo Presents: Music From the Tea Lands (5db56475-7801-4bfc-9cb6-3f330c9a3746) from MusicBrainz
+Success. Distance: 0.03
+Candidate: Various Artists - Putumayo Presents: Music From the Wine Lands (67784dab-b80f-4782-a7c8-611d2998c02a) from MusicBrainz
+Success. Distance: 0.54
+"""
+
+
+class TestSummarise:
+    def test_reads_real_beets_output(self):
+        weak, strong = importer.summarise(REAL_LOG)
+        assert weak["decision"] == "held" and weak["similarity"] == 55.0
+        assert weak["best_match"] == "Dilraj Kaur - Fresh Breeze"
+        assert strong["decision"] == "imported" and strong["similarity"] == 97.0
+        assert strong["best_match"] == "Various Artists - Putumayo Presents: Music From the Tea Lands"
+
+    def test_takes_the_closest_candidate_not_the_first(self):
+        log = ("Tagging A - B\nCandidate: Far\nSuccess. Distance: 0.60\n"
+               "Candidate: Near\nSuccess. Distance: 0.10\n")
+        assert importer.summarise(log)[0]["best_match"] == "Near"
+
+    def test_an_album_with_no_candidates_is_held(self):
+        album = importer.summarise("Tagging X - Y\nNo candidates found.\n")[0]
+        assert album["decision"] == "held" and album["similarity"] is None
+
+    def test_empty_or_missing_log(self):
+        assert importer.summarise("") == []
+
+    def test_noise_before_the_first_album_is_ignored(self):
+        log = "fetchart: google: Disabling art source\nTagging A - B\nSkipping.\n"
+        assert len(importer.summarise(log)) == 1
+
+
+def test_beets_is_asked_to_explain_itself():
+    """Without -v the log said only 'Skipping.', which is how a
+    fingerprinting penalty went undiagnosed through several imports."""
+    cmd = importer.beets_command(Path("/c.yaml"), Path("/s"))
+    assert "-v" in cmd and "-q" in cmd
+
+
+def test_the_automatic_config_does_not_fingerprint():
+    """Measured on a real compilation: chroma moved it from distance 0.03
+    (filed) to 0.13 (held). It belongs in the interactive config only."""
+    import yaml
+
+    cfg = yaml.safe_load((Path(__file__).parent.parent / "beets-pi.yaml").read_text())
+    assert "chroma" not in cfg["plugins"].split()
+    assert isinstance(cfg["fetchart"]["sources"], list)

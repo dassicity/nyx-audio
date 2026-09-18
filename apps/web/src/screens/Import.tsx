@@ -1,9 +1,9 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ApiUnavailable, createBatch, getBatch, listBatches, startBatch, uploadFile,
 } from '../api/nyx.js'
-import type { BatchStatus, ImportBatch } from '../api/nyx.js'
+import type { AlbumDecision, BatchStatus } from '../api/nyx.js'
 import { useClient } from '../api/context.js'
 import { Screen, ScreenHeader, Placeholder } from '../components/Screen.js'
 import { px } from '../format.js'
@@ -43,6 +43,15 @@ export function Import() {
       return s === 'queued' || s === 'running' ? 1500 : false
     },
   })
+
+  // When the active import finishes, the history row still holds the state
+  // it had when the list was fetched — "running", long after it was done.
+  const activeStatus = active.data?.status
+  useEffect(() => {
+    if (activeStatus && !['queued', 'running', 'staging'].includes(activeStatus)) {
+      void queryClient.invalidateQueries({ queryKey: ['import', 'batches'] })
+    }
+  }, [activeStatus, queryClient])
 
   const add = useCallback((files: FileList | File[]) => {
     const accepted = [...files].filter((f) => AUDIO.test(f.name) || SIDECAR.test(f.name))
@@ -232,6 +241,12 @@ export function Import() {
             </div>
           </div>
 
+          {(active.data.albums?.length ?? 0) > 0 && (
+            <div style={{ marginTop: 'var(--nyx-s-5)', display: 'grid', gap: 10 }}>
+              {active.data.albums!.map((a, i) => <Decision key={i} album={a} />)}
+            </div>
+          )}
+
           {active.data.status === 'partial' && (
             <div style={{
               marginTop: 'var(--nyx-s-5)', border: '1px solid var(--nyx-line)',
@@ -241,10 +256,11 @@ export function Import() {
               <p className="mono" style={{
                 margin: 0, fontSize: px(10.5), color: 'var(--nyx-txt-3)', lineHeight: 1.8,
               }}>
-                MusicBrainz had no confident match for these, so they were not
-                filed. Guessing is how wrong metadata gets into a library.
-                They are on the Pi under <code>/srv/nyx/import/quarantine</code>,
-                and importing them by hand with beets is the reliable fix.
+                beets files an album unattended only at 96% similarity or better.
+                Below that it holds the files rather than guess, since guessing is
+                how wrong metadata gets into a library. The usual causes are
+                missing artist tags, or an album MusicBrainz does not know.
+                They are on the Pi under <code>/srv/nyx/import/quarantine/{active.data.id}</code>.
               </p>
               {active.data.files?.filter((f) => f.status === 'quarantined').map((f) => (
                 <div key={f.name} className="mono" style={{
@@ -252,6 +268,20 @@ export function Import() {
                 }}>{f.name}</div>
               ))}
             </div>
+          )}
+
+          {active.data.log && (
+            <details style={{ marginTop: 'var(--nyx-s-5)' }}>
+              <summary className="mono" style={{
+                cursor: 'pointer', fontSize: px(10.5), color: 'var(--nyx-txt-3)',
+              }}>What beets said</summary>
+              <pre className="mono" style={{
+                marginTop: 10, padding: 14, maxHeight: 360, overflow: 'auto',
+                background: 'var(--nyx-bg-1)', border: '1px solid var(--nyx-line)',
+                borderRadius: 'var(--nyx-r-2)', fontSize: px(10), lineHeight: 1.6,
+                color: 'var(--nyx-txt-2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+              }}>{active.data.log}</pre>
+            </details>
           )}
 
           {done && (
@@ -268,10 +298,11 @@ export function Import() {
             borderBottom: '1px solid var(--nyx-line)', paddingBottom: 8, marginBottom: 4,
           }}>Recent imports</div>
           {history.data!.map((b) => (
-            <div key={b.id} style={{
+            <button key={b.id} onClick={() => setActiveId(b.id)} style={{
               display: 'grid', gridTemplateColumns: '14px 1fr auto auto', gap: 12,
-              alignItems: 'center', padding: '9px 0',
+              alignItems: 'center', padding: '9px 0', width: '100%', textAlign: 'left',
               borderBottom: '1px solid var(--nyx-line-soft)',
+              background: b.id === activeId ? 'var(--nyx-bg-2)' : 'transparent',
             }}>
               <StatusDot status={b.status} />
               <span className="mono" style={{
@@ -280,11 +311,47 @@ export function Import() {
               }}>{b.message ?? describe(b.status)}</span>
               <span className="mono" style={meta}>{b.file_count ?? 0} files</span>
               <span className="mono" style={meta}>{when(b.created_at)}</span>
-            </div>
+            </button>
           ))}
         </section>
       )}
     </Screen>
+  )
+}
+
+/** One album: what beets thought it was, how sure it was, what it did. */
+function Decision({ album }: { album: AlbumDecision }) {
+  const filed = album.decision === 'imported'
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: '14px 1fr auto', gap: 12,
+      alignItems: 'baseline', padding: '10px 12px',
+      border: '1px solid var(--nyx-line-soft)', borderRadius: 'var(--nyx-r-2)',
+    }}>
+      <span style={{
+        width: 8, height: 8, borderRadius: '50%', alignSelf: 'center',
+        background: filed ? 'var(--nyx-positive)' : 'var(--nyx-warning)',
+      }} />
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: px(13) }}>{album.album}</div>
+        <div className="mono" style={{
+          fontSize: px(10), color: 'var(--nyx-txt-3)', marginTop: 4, lineHeight: 1.6,
+        }}>
+          {album.best_match
+            ? <>closest match: {album.best_match}</>
+            : <>MusicBrainz had no candidates at all</>}
+        </div>
+      </div>
+      <span className="mono" style={{
+        fontSize: px(11), textAlign: 'right',
+        color: filed ? 'var(--nyx-positive)' : 'var(--nyx-warning)',
+      }}>
+        {album.similarity !== null ? `${album.similarity}%` : '—'}
+        <span style={{ color: 'var(--nyx-txt-3)' }}>
+          {filed ? ' · filed' : ' · held, needs 96%'}
+        </span>
+      </span>
+    </div>
   )
 }
 

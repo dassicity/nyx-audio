@@ -123,6 +123,15 @@ export interface ImportFile {
   status: 'uploaded' | 'imported' | 'quarantined'
 }
 
+/** beets' reasoning for one album, summarised from its verbose output. */
+export interface AlbumDecision {
+  album: string
+  best_match: string | null
+  distance: number | null
+  similarity: number | null
+  decision: 'imported' | 'held' | 'unknown'
+}
+
 export interface ImportBatch {
   id: string
   created_at: string
@@ -131,6 +140,7 @@ export interface ImportBatch {
   message: string | null
   log: string | null
   files?: ImportFile[]
+  albums?: AlbumDecision[]
   file_count?: number
   bytes?: number
 }

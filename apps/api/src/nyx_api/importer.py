@@ -225,6 +225,7 @@ def get_batch(conn: sqlite3.Connection, batch_id: str) -> dict | None:
     ).fetchall()
     batch = dict(row)
     batch["files"] = [dict(f) for f in files]
+    batch["albums"] = summarise(batch.get("log") or "")
     return batch
 
 
@@ -247,12 +248,66 @@ def beets_command(config: Path, staging: Path) -> list[str]:
     confident about and skips the rest rather than asking. Combined with
     `quiet_fallback: skip` in the config, an uncertain album is left in
     staging for us to quarantine — never guessed at.
+
+    `-v` makes beets write down its reasoning — every candidate and its
+    distance. Without it the log said only "Skipping.", which is how a
+    fingerprinting penalty went undiagnosed through several imports.
     """
     return [
-        "beet", "-c", str(config),
+        "beet", "-v", "-c", str(config),
         "import", "-q",
         str(staging),
     ]
+
+
+# beets needs a distance at or below this to file an album unattended.
+STRONG_DISTANCE = 0.04
+
+_TAGGING = re.compile(r"^Tagging (?P<album>.+)$")
+_CANDIDATE = re.compile(r"^Candidate: (?P<name>.+?)(?: \([0-9a-f-]{36}\))?(?: from \w+)?$")
+_DISTANCE = re.compile(r"^Success\. Distance: (?P<d>[0-9.]+)$")
+
+
+def summarise(log: str) -> list[dict]:
+    """Turn beets' verbose output into one line of reasoning per album.
+
+    What a person needs from that output is not the output: it is "what did
+    beets think this was, how sure was it, and what did it do". Each album
+    becomes {album, best_match, distance, similarity, decision}.
+    """
+    albums: list[dict] = []
+    current: dict | None = None
+    pending: str | None = None
+
+    for raw in log.splitlines():
+        line = raw.strip()
+        if m := _TAGGING.match(line):
+            current = {"album": m["album"], "best_match": None,
+                       "distance": None, "decision": "unknown"}
+            albums.append(current)
+            pending = None
+        elif current is None:
+            continue
+        elif m := _CANDIDATE.match(line):
+            pending = m["name"]
+        elif (m := _DISTANCE.match(line)) and pending:
+            d = float(m["d"])
+            if current["distance"] is None or d < current["distance"]:
+                current["distance"], current["best_match"] = d, pending
+            pending = None
+        elif line == "Skipping.":
+            current["decision"] = "held"
+        elif line.startswith(("No candidates found", "No matching release")):
+            current["decision"] = "held"
+
+    for album in albums:
+        d = album["distance"]
+        album["similarity"] = None if d is None else round((1 - d) * 100, 1)
+        if album["decision"] == "unknown":
+            album["decision"] = (
+                "imported" if d is not None and d <= STRONG_DISTANCE else "held"
+            )
+    return albums
 
 
 def run_import(
@@ -265,9 +320,7 @@ def run_import(
 ) -> dict:
     """Import one batch. Returns a summary; never raises for import failure.
 
-    Runs synchronously; callers put it on a background task. Acoustic
-    fingerprinting is the slow step and a Pi is not fast at it, hence the
-    generous timeout.
+    Runs synchronously; callers put it on a background task.
     """
     staging = staging_root / batch_id
     set_status(conn, batch_id, "running")
@@ -279,42 +332,47 @@ def run_import(
     try:
         proc = subprocess.run(
             beets_command(config, staging),
-            capture_output=True, text=True, timeout=timeout,
+            # One stream, in the order beets wrote it. Concatenating stdout
+            # and stderr afterwards put errors after the decisions they
+            # preceded, which made the log misleading to read.
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, timeout=timeout,
         )
-        output = (proc.stdout or "") + (proc.stderr or "")
+        output = proc.stdout or ""
     except subprocess.TimeoutExpired:
         set_status(conn, batch_id, "failed", f"import timed out after {timeout // 60} minutes")
         return {"status": "failed", "imported": 0, "quarantined": 0}
     except FileNotFoundError:
-        set_status(
-            conn, batch_id, "failed",
-            "beets is not installed in this container",
-        )
+        set_status(conn, batch_id, "failed", "beets is not installed in this container")
         return {"status": "failed", "imported": 0, "quarantined": 0}
 
     # beets moves what it accepted. Whatever survives in staging is what it
-    # would not commit to — that is the quarantine, and the reason this can
-    # run unattended without corrupting the library.
-    leftovers = [p for p in staging.rglob("*") if p.is_file() and is_audio(p.name)]
+    # would not commit to — that is the quarantine.
+    leftovers = sorted(p for p in staging.rglob("*") if p.is_file() and is_audio(p.name))
 
-    quarantined = 0
-    if leftovers:
-        destination = quarantine_root / batch_id
-        destination.mkdir(parents=True, exist_ok=True)
-        for path in leftovers:
-            try:
-                shutil.move(str(path), str(destination / path.name))
-                quarantined += 1
-            except OSError:
-                pass
+    # Recorded under the SAME relative path the upload was stored under
+    # ("Album/01 Track.flac"). Matching on bare filenames left every
+    # quarantined row marked 'uploaded', which then became 'imported' — the
+    # interface reported held files as filed, and listed none for review.
+    destination = quarantine_root / batch_id
+    held: list[str] = []
+    for path in leftovers:
+        rel = path.relative_to(staging).as_posix()
+        target = destination / rel
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(path), str(target))
+            held.append(rel)
+        except OSError:
+            pass
+
+    if held:
         conn.execute(
             "UPDATE import_files SET status = 'quarantined' "
-            "WHERE batch_id = ? AND name IN ({})".format(
-                ",".join("?" * len(leftovers))
-            ),
-            (batch_id, *[p.name for p in leftovers]),
+            "WHERE batch_id = ? AND name IN ({})".format(",".join("?" * len(held))),
+            (batch_id, *held),
         )
-
+    # Only audio can be imported; cover art and rip logs ride along with it.
     conn.execute(
         "UPDATE import_files SET status = 'imported' "
         "WHERE batch_id = ? AND status = 'uploaded'",
@@ -322,23 +380,24 @@ def run_import(
     )
     conn.commit()
 
-    total = conn.execute(
-        "SELECT COUNT(*) AS n FROM import_files WHERE batch_id = ?", (batch_id,)
-    ).fetchone()["n"]
-    imported = max(0, total - quarantined)
+    audio_total = sum(
+        1 for row in conn.execute(
+            "SELECT name FROM import_files WHERE batch_id = ?", (batch_id,)
+        ) if is_audio(row["name"])
+    )
+    quarantined = len(held)
+    imported = max(0, audio_total - quarantined)
 
     shutil.rmtree(staging, ignore_errors=True)
 
     if quarantined and imported:
         status, message = "partial", (
-            f"{imported} imported; {quarantined} could not be matched confidently"
+            f"{imported} imported; {quarantined} held — no confident match"
         )
     elif quarantined:
-        status, message = "partial", (
-            f"{quarantined} could not be matched confidently and are held for review"
-        )
+        status, message = "partial", f"{quarantined} held — no confident match"
     else:
-        status, message = "imported", f"{imported} files imported"
+        status, message = "imported", f"{imported} imported"
 
-    set_status(conn, batch_id, status, message, output[-8000:])
+    set_status(conn, batch_id, status, message, output[-20000:])
     return {"status": status, "imported": imported, "quarantined": quarantined}
